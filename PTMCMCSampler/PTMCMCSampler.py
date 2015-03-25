@@ -132,7 +132,9 @@ class PTSampler(object):
 
         # write to file
         if iter % self.isave == 0 and iter > 1 and iter > self.resumeLength:
-            self._writeToFile(iter)
+            if self.MPIrank == 0 or np.all([self.MPIrank > 0,
+                                            self.writeHotChain]):
+                self._writeToFile(iter)
 
             # write output covariance matrix
             np.save(self.outDir + '/cov.npy', self.cov)
@@ -297,7 +299,7 @@ class PTSampler(object):
                 try:
                     Neff = iter / \
                         np.max([acor.acor(self._AMbuffer[
-                            :(iter - 1) % self.bufsize, ii])[0] \
+                            :(iter - 1) % self.bufsize, ii])[0]
                             * self.bufsize for ii in range(self.ndim)])
                     # print '\n {0} effective samples'.format(Neff)
                 except NameError:
