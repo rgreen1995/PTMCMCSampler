@@ -8,18 +8,19 @@ import scipy.stats as ss
 import os
 import sys
 import time
+import Proposals as prop
 from .nutsjump import NUTSJump, HMCJump, MALAJump
 
 try:
     from mpi4py import MPI
 except ImportError:
-    print('Do not have mpi4py package.')
+    print("Do not have mpi4py package.")
     from . import nompi4py as MPI
 
 try:
     from emcee import autocorr
 except ImportError:
-    print('Do not have emcee package')
+    print("Do not have emcee package")
     pass
 
 
@@ -58,9 +59,24 @@ class PTSampler(object):
 
     """
 
-    def __init__(self, ndim, logl, logp, cov, groups=None, loglargs=[], loglkwargs={},
-                 logpargs=[], logpkwargs={}, logl_grad=None, logp_grad=None,
-                 comm=MPI.COMM_WORLD, outDir='./chains', verbose=True, resume=False):
+    def __init__(
+        self,
+        ndim,
+        logl,
+        logp,
+        cov,
+        groups=None,
+        loglargs=[],
+        loglkwargs={},
+        logpargs=[],
+        logpkwargs={},
+        logl_grad=None,
+        logp_grad=None,
+        comm=MPI.COMM_WORLD,
+        outDir="./chains",
+        verbose=True,
+        resume=False,
+    ):
 
         # MPI initialization
         self.comm = comm
@@ -117,14 +133,34 @@ class PTSampler(object):
         # indicator for auxilary jumps
         self.aux = []
 
-    def initialize(self, Niter, ladder=None, Tmin=1, Tmax=None, Tskip=100,
-                   isave=1000, covUpdate=1000, SCAMweight=30,
-                   AMweight=20, DEweight=50,
-                   SCAGweight = 10, MCAGweight =10, AGweight =10,
-                   NUTSweight=20, HMCweight=20, MALAweight=0,
-                   burn=10000, HMCstepsize=0.1, HMCsteps=300,
-                   maxIter=None, thin=10, i0=0, neff=100000,
-                   writeHotChains=False, hotChain=False):
+    def initialize(
+        self,
+        Niter,
+        ladder=None,
+        Tmin=1,
+        Tmax=None,
+        Tskip=100,
+        isave=1000,
+        covUpdate=1000,
+        SCAMweight=30,
+        AMweight=20,
+        DEweight=50,
+        SCAGweight=10,
+        MCAGweight=10,
+        AGweight=10,
+        NUTSweight=20,
+        HMCweight=20,
+        MALAweight=0,
+        burn=10000,
+        HMCstepsize=0.1,
+        HMCsteps=300,
+        maxIter=None,
+        thin=10,
+        i0=0,
+        neff=100000,
+        writeHotChains=False,
+        hotChain=False,
+    ):
         """
         Initialize MCMC quantities
 
@@ -174,44 +210,56 @@ class PTSampler(object):
         # Gradient-based jumps
         if self.logl_grad is not None and self.logp_grad is not None:
             # DOES MALA do anything with the burnin? (Not adaptive enabled yet)
-            malajump = MALAJump(self.logl_grad, self.logp_grad, self.cov,
-                    self.burn)
+            malajump = MALAJump(self.logl_grad, self.logp_grad, self.cov, self.burn)
             self.addProposalToCycle(malajump, MALAweight)
             if MALAweight > 0:
                 print("WARNING: MALA jumps are not working properly yet")
 
             # Perhaps have an option to adaptively tune the mass matrix?
             # Now that is done by defaulk
-            hmcjump = HMCJump(self.logl_grad, self.logp_grad, self.cov,
-                    self.burn, stepsize=HMCstepsize, nminsteps=2,
-                    nmaxsteps=HMCsteps)
+            hmcjump = HMCJump(
+                self.logl_grad,
+                self.logp_grad,
+                self.cov,
+                self.burn,
+                stepsize=HMCstepsize,
+                nminsteps=2,
+                nmaxsteps=HMCsteps,
+            )
             self.addProposalToCycle(hmcjump, HMCweight)
 
             # Target acceptance rate (delta) should be optimal for 0.6
-            nutsjump = NUTSJump(self.logl_grad, self.logp_grad, self.cov,
-                    self.burn, trajectoryDir=None, write_burnin=False,
-                    force_trajlen=None, force_epsilon=None, delta=0.6)
+            nutsjump = NUTSJump(
+                self.logl_grad,
+                self.logp_grad,
+                self.cov,
+                self.burn,
+                trajectoryDir=None,
+                write_burnin=False,
+                force_trajlen=None,
+                force_epsilon=None,
+                delta=0.6,
+            )
             self.addProposalToCycle(nutsjump, NUTSweight)
 
         # add SCAM
-        self.addProposalToCycle(self.covarianceJumpProposalSCAM,
-                                self.SCAMweight)
+        self.addProposalToCycle(prop.covarianceJumpProposalSCAM, self.SCAMweight)
 
         # add AM
-        self.addProposalToCycle(self.covarianceJumpProposalAM, self.AMweight)
+        self.addProposalToCycle(prop.covarianceJumpProposalAM, self.AMweight)
 
         ## add SCAG
-        self.addProposalToCycle(self.SCAGjump, self.SCAGweight)
+        self.addProposalToCycle(prop.SCAGjump, self.SCAGweight)
 
         ## add MCAG
-        self.addProposalToCycle(self.MCAGjump, self.MCAGweight)
+        self.addProposalToCycle(prop.MCAGjump, self.MCAGweight)
 
         ## add AG
-        self.addProposalToCycle(self.AGjump, self.AGweight)
+        self.addProposalToCycle(prop.AGjump, self.AGweight)
 
         # check length of jump cycle
         if len(self.propCycle) == 0:
-            raise ValueError('No jump proposals specified!')
+            raise ValueError("No jump proposals specified!")
 
         # randomize cycle
         self.randomizeProposalCycle()
@@ -224,11 +272,11 @@ class PTSampler(object):
         self.temp = self.ladder[self.MPIrank]
 
         # hot chain sampling from prior
-        if hotChain and self.MPIrank == self.nchain-1:
+        if hotChain and self.MPIrank == self.nchain - 1:
             self.temp = 1e80
-            self.fname = self.outDir + '/chain_hot.txt'
+            self.fname = self.outDir + "/chain_hot.txt"
         else:
-            self.fname = self.outDir + '/chain_{0}.txt'.format(self.temp)
+            self.fname = self.outDir + "/chain_{0}.txt".format(self.temp)
 
         # write hot chains
         self.writeHotChains = writeHotChains
@@ -236,18 +284,18 @@ class PTSampler(object):
         self.resumeLength = 0
         if self.resume and os.path.isfile(self.fname):
             if self.verbose:
-                print('Resuming run from chain file {0}'.format(self.fname))
+                print("Resuming run from chain file {0}".format(self.fname))
             try:
                 self.resumechain = np.loadtxt(self.fname)
                 self.resumeLength = self.resumechain.shape[0]
             except ValueError:
-                print('WARNING: Cant read in file. Removing last line.')
-                os.system('sed -ie \'$d\' {0}'.format(self.fname))
+                print("WARNING: Cant read in file. Removing last line.")
+                os.system("sed -ie '$d' {0}".format(self.fname))
                 self.resumechain = np.loadtxt(self.fname)
                 self.resumeLength = self.resumechain.shape[0]
-            self._chainfile = open(self.fname, 'a')
+            self._chainfile = open(self.fname, "a")
         else:
-            self._chainfile = open(self.fname, 'w')
+            self._chainfile = open(self.fname, "w")
         self._chainfile.close()
 
     def updateChains(self, p0, lnlike0, lnprob0, iter):
@@ -272,21 +320,48 @@ class PTSampler(object):
                 self._writeToFile(iter)
 
             # write output covariance matrix
-            np.save(self.outDir + '/cov.npy', self.cov)
+            np.save(self.outDir + "/cov.npy", self.cov)
             if self.MPIrank == 0 and self.verbose and iter > 1:
-                sys.stdout.write('\r')
-                sys.stdout.write('Finished %2.2f percent in %f s Acceptance rate = %g'
-                                 % (iter / self.Niter * 100, time.time() - self.tstart,
-                                    self.naccepted / iter))
+                sys.stdout.write("\r")
+                sys.stdout.write(
+                    "Finished %2.2f percent in %f s Acceptance rate = %g"
+                    % (
+                        iter / self.Niter * 100,
+                        time.time() - self.tstart,
+                        self.naccepted / iter,
+                    )
+                )
                 sys.stdout.flush()
 
-    def sample(self, p0, Niter, ladder=None, Tmin=1, Tmax=None, Tskip=100,
-               isave=1000, covUpdate=1000, SCAMweight=20,
-               AMweight=20, DEweight=20, NUTSweight=20, MALAweight=20,
-               SCAGweight = 10, MCAGweight =10, AGweight =10,
-               HMCweight=20, burn=10000, HMCstepsize=0.1, HMCsteps=300,
-               maxIter=None, thin=10, i0=0, neff=100000,
-               writeHotChains=False, hotChain=False):
+    def sample(
+        self,
+        p0,
+        Niter,
+        ladder=None,
+        Tmin=1,
+        Tmax=None,
+        Tskip=100,
+        isave=1000,
+        covUpdate=1000,
+        SCAMweight=20,
+        AMweight=20,
+        DEweight=20,
+        NUTSweight=20,
+        MALAweight=20,
+        SCAGweight=10,
+        MCAGweight=10,
+        AGweight=10,
+        HMCweight=20,
+        burn=10000,
+        HMCstepsize=0.1,
+        HMCsteps=300,
+        maxIter=None,
+        thin=10,
+        i0=0,
+        neff=100000,
+        writeHotChains=False,
+        hotChain=False,
+    ):
         """
         Function to carry out PTMCMC sampling.
 
@@ -326,25 +401,43 @@ class PTSampler(object):
 
         # if picking up from previous run, don't re-initialize
         if i0 == 0:
-            self.initialize(Niter, ladder=ladder, Tmin=Tmin, Tmax=Tmax,
-                            Tskip=Tskip, isave=isave, covUpdate=covUpdate,
-                            SCAMweight=SCAMweight,
-                            AMweight=AMweight, DEweight=DEweight,
-                            SCAGweight=SCAGweight, MCAGweight=MCAGweight,
-                            AGweight=AGweight,
-                            NUTSweight=NUTSweight, MALAweight=MALAweight,
-                            HMCweight=HMCweight, burn=burn,
-                            HMCstepsize=HMCstepsize, HMCsteps=HMCsteps,
-                            maxIter=maxIter, thin=thin, i0=i0,
-                            neff=neff, writeHotChains=writeHotChains,
-                            hotChain=hotChain)
+            self.initialize(
+                Niter,
+                ladder=ladder,
+                Tmin=Tmin,
+                Tmax=Tmax,
+                Tskip=Tskip,
+                isave=isave,
+                covUpdate=covUpdate,
+                SCAMweight=SCAMweight,
+                AMweight=AMweight,
+                DEweight=DEweight,
+                SCAGweight=SCAGweight,
+                MCAGweight=MCAGweight,
+                AGweight=AGweight,
+                NUTSweight=NUTSweight,
+                MALAweight=MALAweight,
+                HMCweight=HMCweight,
+                burn=burn,
+                HMCstepsize=HMCstepsize,
+                HMCsteps=HMCsteps,
+                maxIter=maxIter,
+                thin=thin,
+                i0=i0,
+                neff=neff,
+                writeHotChains=writeHotChains,
+                hotChain=hotChain,
+            )
 
         ### compute lnprob for initial point in chain ###
 
         # if resuming, just start with first point in chain
         if self.resume and self.resumeLength > 0:
-            p0, lnlike0, lnprob0 = self.resumechain[0, :-4], \
-                self.resumechain[0, -3], self.resumechain[0, -4]
+            p0, lnlike0, lnprob0 = (
+                self.resumechain[0, :-4],
+                self.resumechain[0, -3],
+                self.resumechain[0, -4],
+            )
         else:
             # compute prior
             lp = self.logp(p0)
@@ -374,18 +467,25 @@ class PTSampler(object):
             accepted = 0
 
             # call PTMCMCOneStep
-            p0, lnlike0, lnprob0 = self.PTMCMCOneStep(
-                p0, lnlike0, lnprob0, iter)
+            p0, lnlike0, lnprob0 = self.PTMCMCOneStep(p0, lnlike0, lnprob0, iter)
 
             # compute effective number of samples
             if iter % 100000 == 0 and iter > 2 * self.burn and self.MPIrank == 0:
                 try:
-                    Neff = iter / \
-                            max(1, np.nanmax([autocorr.integrated_time(
-                            self._AMbuffer[self.burn:(iter - 1), ii])
-                                          for ii in range(self.ndim)]))
-                    print('\n {0} total samples'.format(iter))
-                    print('\n {0} effective samples'.format(Neff))
+                    ### Potentially change this to arviz ess?
+                    Neff = iter / max(
+                        1,
+                        np.nanmax(
+                            [
+                                autocorr.integrated_time(
+                                    self._AMbuffer[self.burn : (iter - 1), ii]
+                                )
+                                for ii in range(self.ndim)
+                            ]
+                        ),
+                    )
+                    print("\n {0} total samples".format(iter))
+                    print("\n {0} effective samples".format(Neff))
                 except NameError:
                     Neff = 0
                     pass
@@ -393,13 +493,13 @@ class PTSampler(object):
             # stop if reached maximum number of iterations
             if self.MPIrank == 0 and iter >= self.Niter - 1:
                 if self.verbose:
-                    print('\nRun Complete')
+                    print("\nRun Complete")
                 runComplete = True
 
             # stop if reached effective number of samples
             if self.MPIrank == 0 and int(Neff) > self.neff:
                 if self.verbose:
-                    print('\nRun Complete with {0} effective samples'.format(int(Neff)))
+                    print("\nRun Complete with {0} effective samples".format(int(Neff)))
                 runComplete = True
 
             if self.MPIrank == 0 and runComplete:
@@ -426,19 +526,20 @@ class PTSampler(object):
 
         """
         # update covariance matrix
-        if (iter - 1) % self.covUpdate == 0 and (iter -
-                                                 1) != 0 and self.MPIrank == 0:
+        if (iter - 1) % self.covUpdate == 0 and (iter - 1) != 0 and self.MPIrank == 0:
             self._updateRecursive(iter - 1, self.covUpdate)
 
             # broadcast to other chains
-            [self.comm.send(self.cov, dest=rank + 1, tag=111) for rank
-             in range(self.nchain - 1)]
+            [
+                self.comm.send(self.cov, dest=rank + 1, tag=111)
+                for rank in range(self.nchain - 1)
+            ]
 
         # check for sent covariance matrix from T = 0 chain
         getCovariance = self.comm.Iprobe(source=0, tag=111)
         time.sleep(0.000001)
         if getCovariance and self.MPIrank > 0:
-            self.cov[:,:] = self.comm.recv(source=0, tag=111)
+            self.cov[:, :] = self.comm.recv(source=0, tag=111)
             for ct, group in enumerate(self.groups):
                 covgroup = np.zeros((len(group), len(group)))
                 for ii in range(len(group)):
@@ -448,15 +549,15 @@ class PTSampler(object):
                 self.U[ct], self.S[ct], v = np.linalg.svd(covgroup)
             getCovariance = 0
 
-
         # update DE buffer
-        if (iter - 1) % self.burn == 0 and (iter -
-                                            1) != 0 and self.MPIrank == 0:
+        if (iter - 1) % self.burn == 0 and (iter - 1) != 0 and self.MPIrank == 0:
             self._updateDEbuffer(iter - 1, self.burn)
 
             # broadcast to other chains
-            [self.comm.send(self._DEbuffer, dest=rank + 1, tag=222) for rank
-             in range(self.nchain - 1)]
+            [
+                self.comm.send(self._DEbuffer, dest=rank + 1, tag=222)
+                for rank in range(self.nchain - 1)
+            ]
 
         # check for sent DE buffer from T = 0 chain
         getDEbuf = self.comm.Iprobe(source=0, tag=222)
@@ -466,8 +567,8 @@ class PTSampler(object):
             self._DEbuffer = self.comm.recv(source=0, tag=222)
 
             # randomize cycle
-            if self.DEJump not in self.propCycle:
-                self.addProposalToCycle(self.DEJump, self.DEweight)
+            if prop.DEJump not in self.propCycle:
+                self.addProposalToCycle(prop.DEJump, self.DEweight)
                 self.randomizeProposalCycle()
 
             # reset
@@ -476,8 +577,8 @@ class PTSampler(object):
         # after burn in, add DE jumps
         if (iter - 1) == self.burn and self.MPIrank == 0:
             if self.verbose:
-                print('Adding DE jump with weight {0}'.format(self.DEweight))
-            self.addProposalToCycle(self.DEJump, self.DEweight)
+                print("Adding DE jump with weight {0}".format(self.DEweight))
+            self.addProposalToCycle(prop.DEJump, self.DEweight)
 
             # randomize cycle
             self.randomizeProposalCycle()
@@ -486,8 +587,11 @@ class PTSampler(object):
 
         # if resuming, just use previous chain points
         if self.resume and self.resumeLength > 0 and iter < self.resumeLength:
-            p0, lnlike0, lnprob0 = self.resumechain[iter, :-4], \
-                self.resumechain[iter, -3], self.resumechain[iter, -4]
+            p0, lnlike0, lnprob0 = (
+                self.resumechain[iter, :-4],
+                self.resumechain[iter, -3],
+                self.resumechain[iter, -4],
+            )
 
             # update acceptance counter
             self.naccepted = iter * self.resumechain[iter, -2]
@@ -521,8 +625,7 @@ class PTSampler(object):
                 self.jumpDict[jump_name][1] += 1
 
         # temperature swap
-        swapReturn, p0, lnlike0, lnprob0 = self.PTswap(
-            p0, lnlike0, lnprob0, iter)
+        swapReturn, p0, lnlike0, lnprob0 = self.PTswap(p0, lnlike0, lnprob0, iter)
 
         # check return value
         if swapReturn != 0:
@@ -577,9 +680,14 @@ class PTSampler(object):
 
                 # exchange parameters
                 pnew = np.empty(self.ndim)
-                self.comm.Sendrecv(p0, dest=self.MPIrank+1, sendtag=19,
-                              recvbuf=pnew, source=self.MPIrank+1,
-                              recvtag=19)
+                self.comm.Sendrecv(
+                    p0,
+                    dest=self.MPIrank + 1,
+                    sendtag=19,
+                    recvbuf=pnew,
+                    source=self.MPIrank + 1,
+                    recvtag=19,
+                )
                 p0 = pnew
 
                 # calculate new posterior values
@@ -597,9 +705,9 @@ class PTSampler(object):
                 newlnlike = self.comm.recv(source=self.MPIrank - 1, tag=18)
 
                 # determine if swap is accepted and tell other chain
-                logChainSwap = (1 / self.ladder[self.MPIrank - 1] -
-                                1 / self.ladder[self.MPIrank]) \
-                    * (lnlike0 - newlnlike)
+                logChainSwap = (
+                    1 / self.ladder[self.MPIrank - 1] - 1 / self.ladder[self.MPIrank]
+                ) * (lnlike0 - newlnlike)
 
                 if logChainSwap > np.log(np.random.rand()):
                     swapAccepted = 1
@@ -618,9 +726,14 @@ class PTSampler(object):
 
                     # exchange parameters
                     pnew = np.empty(self.ndim)
-                    self.comm.Sendrecv(p0, dest=self.MPIrank-1, sendtag=19,
-                                  recvbuf=pnew, source=self.MPIrank-1,
-                                  recvtag=19)
+                    self.comm.Sendrecv(
+                        p0,
+                        dest=self.MPIrank - 1,
+                        sendtag=19,
+                        recvbuf=pnew,
+                        source=self.MPIrank - 1,
+                        recvtag=19,
+                    )
                     p0 = pnew
 
                     # calculate new posterior values
@@ -671,19 +784,22 @@ class PTSampler(object):
 
         """
 
-        self._chainfile = open(self.fname, 'a+')
+        self._chainfile = open(self.fname, "a+")
         for jj in range((iter - self.isave), iter, self.thin):
             ind = int(jj / self.thin)
             pt_acc = 1
             if self.MPIrank < self.nchain - 1 and self.swapProposed != 0:
                 pt_acc = self.nswap_accepted / self.swapProposed
 
-            self._chainfile.write('\t'.join(['%22.22f' % (self._chain[ind, kk])
-                                             for kk in range(self.ndim)]))
-            self._chainfile.write('\t%f\t%f\t%f\t%f\n' % (self._lnprob[ind],
-                                                          self._lnlike[ind],
-                                                          self.naccepted/iter,
-                                                          pt_acc))
+            self._chainfile.write(
+                "\t".join(
+                    ["%22.22f" % (self._chain[ind, kk]) for kk in range(self.ndim)]
+                )
+            )
+            self._chainfile.write(
+                "\t%f\t%f\t%f\t%f\n"
+                % (self._lnprob[ind], self._lnlike[ind], self.naccepted / iter, pt_acc)
+            )
         self._chainfile.close()
 
         #### write jump statistics files ####
@@ -692,24 +808,24 @@ class PTSampler(object):
         if self.MPIrank == 0:
 
             # first write file contaning jump names and jump rates
-            fout = open(self.outDir + '/jumps.txt', 'w')
+            fout = open(self.outDir + "/jumps.txt", "w")
             njumps = len(self.propCycle)
             ujumps = np.array(list(set(self.propCycle)))
             for jump in ujumps:
-                fout.write('%s %4.2g\n' % (
-                    jump.__name__,
-                    np.sum(np.array(self.propCycle)==jump)/njumps))
+                fout.write(
+                    "%s %4.2g\n"
+                    % (jump.__name__, np.sum(np.array(self.propCycle) == jump) / njumps)
+                )
 
             fout.close()
 
             # now write jump statistics for each jump proposal
             for jump in self.jumpDict:
-                fout = open(self.outDir + '/' + jump + '_jump.txt', 'a+')
-                fout.write('%g\n'%(self.jumpDict[jump][1]/max(1,
-                        self.jumpDict[jump][0])))
+                fout = open(self.outDir + "/" + jump + "_jump.txt", "a+")
+                fout.write(
+                    "%g\n" % (self.jumpDict[jump][1] / max(1, self.jumpDict[jump][0]))
+                )
                 fout.close()
-
-
 
     # function to update covariance matrix for jump proposals
     def _updateRecursive(self, iter, mem):
@@ -736,10 +852,9 @@ class PTSampler(object):
                 diff[jj] = self._AMbuffer[iter - mem + ii, jj] - self.mu[jj]
                 self.mu[jj] += diff[jj] / it
 
-            self.M2 += np.outer(diff,
-                                (self._AMbuffer[iter - mem + ii, :] - self.mu))
+            self.M2 += np.outer(diff, (self._AMbuffer[iter - mem + ii, :] - self.mu))
 
-        self.cov[:,:] = self.M2 / (it - 1)
+        self.cov[:, :] = self.M2 / (it - 1)
 
         # do svd on parameter groups
         for ct, group in enumerate(self.groups):
@@ -749,7 +864,6 @@ class PTSampler(object):
                     covgroup[ii, jj] = self.cov[group[ii], group[jj]]
 
             self.U[ct], self.S[ct], v = np.linalg.svd(covgroup)
-
 
     # update DE buffer samples
     def _updateDEbuffer(self, iter, burn):
@@ -762,289 +876,7 @@ class PTSampler(object):
 
         """
 
-        self._DEbuffer = self._AMbuffer[iter - burn:iter]
-
-    # SCAM jump
-    def covarianceJumpProposalSCAM(self, x, iter, beta):
-        """
-        Single Component Adaptive Jump Proposal. This function will occasionally
-        jump in more than 1 parameter. It will also occasionally use different
-        jump sizes to ensure proper mixing.
-
-        @param x: Parameter vector at current position
-        @param iter: Iteration of sampler
-        @param beta: Inverse temperature of chain
-
-        @return: q: New position in parameter space
-        @return: qxy: Forward-Backward jump probability
-
-        """
-
-        q = x.copy()
-        qxy = 0
-
-        # choose group
-        jumpind = np.random.randint(0, len(self.groups))
-        ndim = len(self.groups[jumpind])
-
-        # adjust step size
-        prob = np.random.rand()
-
-        # large jump
-        if prob > 0.97:
-            scale = 10
-
-        # small jump
-        elif prob > 0.9:
-            scale = 0.2
-
-        # small-medium jump
-        # elif prob > 0.6:
-            #:wq    scale = 0.5
-
-        # standard medium jump
-        else:
-            scale = 1.0
-
-        #scale = np.random.uniform(0.5, 10)
-
-        # adjust scale based on temperature
-        if self.temp <= 100:
-            scale *= np.sqrt(self.temp)
-
-        # get parmeters in new diagonalized basis
-        #y = np.dot(self.U.T, x[self.covinds])
-
-        # make correlated componentwise adaptive jump
-        ind = np.unique(np.random.randint(0, ndim, 1))
-        neff = len(ind)
-        cd = 2.4 / np.sqrt(2 * neff) * scale
-
-        #y[ind] = y[ind] + np.random.randn(neff) * cd * np.sqrt(self.S[ind])
-        #q[self.covinds] = np.dot(self.U, y)
-        q[self.groups[jumpind]] += np.random.randn() * cd * np.sqrt(self.S[jumpind][ind]) * \
-            self.U[jumpind][:, ind].flatten()
-
-        return q, qxy
-
-    # AM jump
-    def covarianceJumpProposalAM(self, x, iter, beta):
-        """
-        Adaptive Jump Proposal. This function will occasionally
-        use different jump sizes to ensure proper mixing.
-
-        @param x: Parameter vector at current position
-        @param iter: Iteration of sampler
-        @param beta: Inverse temperature of chain
-
-        @return: q: New position in parameter space
-        @return: qxy: Forward-Backward jump probability
-
-        """
-
-        q = x.copy()
-        qxy = 0
-
-        # choose group
-        jumpind = np.random.randint(0, len(self.groups))
-        ndim = len(self.groups[jumpind])
-
-        # adjust step size
-        prob = np.random.rand()
-
-        # large jump
-        if prob > 0.97:
-            scale = 10
-
-        # small jump
-        elif prob > 0.9:
-            scale = 0.2
-
-        # small-medium jump
-        # elif prob > 0.6:
-        #    scale = 0.5
-
-        # standard medium jump
-        else:
-            scale = 1.0
-
-        # adjust scale based on temperature
-        if self.temp <= 100:
-            scale *= np.sqrt(self.temp)
-
-        # get parmeters in new diagonalized basis
-        y = np.dot(self.U[jumpind].T, x[self.groups[jumpind]])
-
-        # make correlated componentwise adaptive jump
-        ind = np.arange(len(self.groups[jumpind]))
-        neff = len(ind)
-        cd = 2.4 / np.sqrt(2 * neff) * scale
-
-        y[ind] = y[ind] + \
-            np.random.randn(neff) * cd * np.sqrt(self.S[jumpind][ind])
-        q[self.groups[jumpind]] = np.dot(self.U[jumpind], y)
-
-        return q, qxy
-
-    def SCAGjump(self, x, iter, beta):
-        """
-        Single component Adaptive Gaussian jump, this jump will pick one
-        parameter at random and move according to ~N(0, sigma), where sigma is
-        an adaptive parameter that adjusts according to the current acceptance
-        rate
-
-        @param x: Parameter vector at current position
-        @param iter: Iteration of sampler
-        @param beta: Inverse temperature of chain
-
-        @return: q: New position in parameter space
-        @return: lqxy: log Forward-Backward jump probability
-        """
-
-        q = x.copy()
-
-        # choose parameter
-        jumpind = np.random.randint(0, len(q))
-        acc_rate = self.naccepted/iter
-        ### ask about this
-        scaling_factor = 1./100
-
-        if np.std(self._chain[:,jumpind]) == 0 :
-            current_sigma = 1
-        else :
-            current_sigma = np.std(self._chain[:,jumpind])
-        if acc_rate > 0.234:
-            sigma = current_sigma + q[jumpind] * scaling_factor * acc_rate
-        else :
-            sigma = current_sigma - q[jumpind] * scaling_factor * acc_rate
-        q[jumpind] = q[jumpind] + np.random.normal(0,sigma)
-        lqxy = 0
-        return q, lqxy
-
-    def MCAGjump(self, x, iter, beta):
-        """
-        Multi component Adaptive Gaussian jump, this jump will pick several
-        parameters at random and move according to ~N(0, sigma), where sigma is
-        an adaptive parameter that adjusts according to the current acceptance
-        rate
-
-        @param x: Parameter vector at current position
-        @param iter: Iteration of sampler
-        @param beta: Inverse temperature of chain
-
-        @return: q: New position in parameter space
-        @return: lqxy: log Forward-Backward jump probability
-        """
-
-        q = x.copy()
-
-        # choose parameter
-        n_jump_ind = np.random.randint(0, len(q))
-        jumpind = np.random.randint(0, len(q) , n_jump_ind)
-        acc_rate = self.naccepted/iter
-        ### ask about this
-        scaling_factor = 1./100
-        for ind in jumpind:
-            if np.std(self._chain[:,ind]) == 0 :
-                current_sigma = 1
-            else :
-                current_sigma = np.std(self._chain[:,ind])
-            if acc_rate > 0.234:
-                sigma = current_sigma + q[ind] * scaling_factor * acc_rate
-            else :
-                sigma = current_sigma - q[ind] * scaling_factor * acc_rate
-            q[ind] = q[ind] + np.random.normal(0,abs(sigma))
-        lqxy = 0
-        return q, lqxy
-
-    def AGjump(self, x, iter, beta):
-        """
-        Adaptive Gaussian jump in all parameters, this jump will
-        move according to ~N(0, sigma), where sigma is an adaptive parameter
-        that adjusts according to the current acceptance rate
-
-        @param x: Parameter vector at current position
-        @param iter: Iteration of sampler
-        @param beta: Inverse temperature of chain
-
-        @return: q: New position in parameter space
-        @return: lqxy: log Forward-Backward jump probability
-        """
-
-        q = x.copy()
-
-        # choose parameter
-        acc_rate = self.naccepted/iter
-        ### ask about this
-        scaling_factor = 1./100
-        for ind in range(len(q)):
-            if np.std(self._chain[:,ind]) == 0 :
-                current_sigma = 1
-            else :
-                current_sigma = np.std(self._chain[:,ind])
-            if acc_rate > 0.234:
-                sigma = current_sigma + q[ind] * scaling_factor * acc_rate
-            else :
-                sigma = current_sigma - q[ind] * scaling_factor * acc_rate
-            print(sigma)
-            q[ind] = q[ind] + np.random.normal(0,sigma)
-        lqxy = 0
-        return q, lqxy
-
-    # Differential evolution jump
-    def DEJump(self, x, iter, beta):
-        """
-        Differential Evolution Jump. This function will  occasionally
-        use different jump sizes to ensure proper mixing.
-
-        @param x: Parameter vector at current position
-        @param iter: Iteration of sampler
-        @param beta: Inverse temperature of chain
-
-        @return: q: New position in parameter space
-        @return: qxy: Forward-Backward jump probability
-
-        """
-
-        # get old parameters
-        q = x.copy()
-        qxy = 0
-
-        # choose group
-        jumpind = np.random.randint(0, len(self.groups))
-        ndim = len(self.groups[jumpind])
-
-        bufsize = np.alen(self._DEbuffer)
-
-        # draw a random integer from 0 - iter
-        mm = np.random.randint(0, bufsize)
-        nn = np.random.randint(0, bufsize)
-
-        # make sure mm and nn are not the same iteration
-        while mm == nn:
-            nn = np.random.randint(0, bufsize)
-
-        # get jump scale size
-        prob = np.random.rand()
-
-        # mode jump
-        if prob > 0.5:
-            scale = 1.0
-
-        else:
-            scale = np.random.rand() * 2.4 / np.sqrt(2 * ndim) * \
-                np.sqrt(1 / beta)
-
-        for ii in range(ndim):
-
-            # jump size
-            sigma = self._DEbuffer[mm, self.groups[jumpind][ii]] - \
-                    self._DEbuffer[nn, self.groups[jumpind][ii]]
-
-            # jump
-            q[self.groups[jumpind][ii]] += scale * sigma
-
-        return q, qxy
+        self._DEbuffer = self._AMbuffer[iter - burn : iter]
 
     # add jump proposal distribution functions
     def addProposalToCycle(self, func, weight):
@@ -1061,8 +893,8 @@ class PTSampler(object):
 
         # check for 0 weight
         if weight == 0:
-            #print('ERROR: Can not have 0 weight in proposal cycle!')
-            #sys.exit()
+            # print('ERROR: Can not have 0 weight in proposal cycle!')
+            # sys.exit()
             return
 
         # add proposal to cycle
@@ -1072,9 +904,8 @@ class PTSampler(object):
         # add to jump dictionary and initialize file
         if func.__name__ not in self.jumpDict:
             self.jumpDict[func.__name__] = [0, 0]
-            fout = open(self.outDir + '/' + func.__name__ + '_jump.txt', 'w')
+            fout = open(self.outDir + "/" + func.__name__ + "_jump.txt", "w")
             fout.close()
-
 
     # add auxilary jump proposal distribution functions
     def addAuxilaryJump(self, func):
@@ -1119,7 +950,17 @@ class PTSampler(object):
 
         # call function
         ind = np.random.randint(0, length)
-        q, qxy = self.propCycle[ind](x, iter, 1/self.temp)
+        q, qxy = self.propCycle[ind](
+            x,
+            iter,
+            1 / self.temp,
+            self.groups,
+            self.U,
+            self.S,
+            self.naccepted,
+            self._chain,
+            self._DEbuffer,
+        )
 
         # axuilary jump
         if len(self.aux) > 0:
