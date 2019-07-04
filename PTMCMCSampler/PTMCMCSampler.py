@@ -120,6 +120,7 @@ class PTSampler(object):
     def initialize(self, Niter, ladder=None, Tmin=1, Tmax=None, Tskip=100,
                    isave=1000, covUpdate=1000, SCAMweight=30,
                    AMweight=20, DEweight=50,
+                   SCAGweight = 10, MCAGweight =10, AGweight =10,
                    NUTSweight=20, HMCweight=20, MALAweight=0,
                    burn=10000, HMCstepsize=0.1, HMCsteps=300,
                    maxIter=None, thin=10, i0=0, neff=100000,
@@ -142,6 +143,9 @@ class PTSampler(object):
         self.SCAMweight = SCAMweight
         self.AMweight = AMweight
         self.DEweight = DEweight
+        self.SCAGweight = SCAGweight
+        self.MCAGweight = MCAGweight
+        self.AGweight = AGweight
         self.burn = burn
         self.Tskip = Tskip
         self.thin = thin
@@ -195,6 +199,15 @@ class PTSampler(object):
 
         # add AM
         self.addProposalToCycle(self.covarianceJumpProposalAM, self.AMweight)
+
+        ## add SCAG
+        self.addProposalToCycle(self.SCAGjump, self.SCAGweight)
+
+        ## add MCAG
+        self.addProposalToCycle(self.MCAGjump, self.MCAGweight)
+
+        ## add AG
+        self.addProposalToCycle(self.AGjump, self.AGweight)
 
         # check length of jump cycle
         if len(self.propCycle) == 0:
@@ -270,6 +283,7 @@ class PTSampler(object):
     def sample(self, p0, Niter, ladder=None, Tmin=1, Tmax=None, Tskip=100,
                isave=1000, covUpdate=1000, SCAMweight=20,
                AMweight=20, DEweight=20, NUTSweight=20, MALAweight=20,
+               SCAGweight = 10, MCAGweight =10, AGweight =10,
                HMCweight=20, burn=10000, HMCstepsize=0.1, HMCsteps=300,
                maxIter=None, thin=10, i0=0, neff=100000,
                writeHotChains=False, hotChain=False):
@@ -316,6 +330,8 @@ class PTSampler(object):
                             Tskip=Tskip, isave=isave, covUpdate=covUpdate,
                             SCAMweight=SCAMweight,
                             AMweight=AMweight, DEweight=DEweight,
+                            SCAGweight=SCAGweight, MCAGweight=MCAGweight,
+                            AGweight=AGweight,
                             NUTSweight=NUTSweight, MALAweight=MALAweight,
                             HMCweight=HMCweight, burn=burn,
                             HMCstepsize=HMCstepsize, HMCsteps=HMCsteps,
@@ -362,12 +378,13 @@ class PTSampler(object):
                 p0, lnlike0, lnprob0, iter)
 
             # compute effective number of samples
-            if iter % 1000 == 0 and iter > 2 * self.burn and self.MPIrank == 0:
+            if iter % 100000 == 0 and iter > 2 * self.burn and self.MPIrank == 0:
                 try:
                     Neff = iter / \
                             max(1, np.nanmax([acor.acor(self._AMbuffer[self.burn:(iter - 1), ii])[0]
                                           for ii in range(self.ndim)]))
-                    # print('\n {0} effective samples'.format(Neff))
+                    print('\n {0} total samples'.format(iter))
+                    print('\n {0} effective samples'.format(Neff))
                 except NameError:
                     Neff = 0
                     pass
@@ -868,6 +885,111 @@ class PTSampler(object):
         q[self.groups[jumpind]] = np.dot(self.U[jumpind], y)
 
         return q, qxy
+
+    def SCAGjump(self, x, iter, beta):
+        """
+        Single component Adaptive Gaussian jump, this jump will pick one
+        parameter at random and move according to ~N(0, sigma), where sigma is
+        an adaptive parameter that adjusts according to the current acceptance
+        rate
+
+        @param x: Parameter vector at current position
+        @param iter: Iteration of sampler
+        @param beta: Inverse temperature of chain
+
+        @return: q: New position in parameter space
+        @return: lqxy: log Forward-Backward jump probability
+        """
+
+        q = x.copy()
+
+        # choose parameter
+        jumpind = np.random.randint(0, len(q))
+        acc_rate = self.naccepted/iter
+        ### ask about this
+        scaling_factor = 1./100
+
+        if np.std(self._chain[:,jumpind]) == 0 :
+            current_sigma = 1
+        else :
+            current_sigma = np.std(self._chain[:,jumpind])
+        if acc_rate > 0.234:
+            sigma = current_sigma + q[jumpind] * scaling_factor * acc_rate
+        else :
+            sigma = current_sigma - q[jumpind] * scaling_factor * acc_rate
+        q[jumpind] = q[jumpind] + np.random.normal(0,sigma)
+        lqxy = 0
+        return q, lqxy
+
+    def MCAGjump(self, x, iter, beta):
+        """
+        Multi component Adaptive Gaussian jump, this jump will pick several
+        parameters at random and move according to ~N(0, sigma), where sigma is
+        an adaptive parameter that adjusts according to the current acceptance
+        rate
+
+        @param x: Parameter vector at current position
+        @param iter: Iteration of sampler
+        @param beta: Inverse temperature of chain
+
+        @return: q: New position in parameter space
+        @return: lqxy: log Forward-Backward jump probability
+        """
+
+        q = x.copy()
+
+        # choose parameter
+        n_jump_ind = np.random.randint(0, len(q))
+        jumpind = np.random.randint(0, len(q) , n_jump_ind)
+        acc_rate = self.naccepted/iter
+        ### ask about this
+        scaling_factor = 1./100
+        for ind in jumpind:
+            if np.std(self._chain[:,ind]) == 0 :
+                current_sigma = 1
+            else :
+                current_sigma = np.std(self._chain[:,ind])
+            if acc_rate > 0.234:
+                sigma = current_sigma + q[ind] * scaling_factor * acc_rate
+            else :
+                sigma = current_sigma - q[ind] * scaling_factor * acc_rate
+            q[ind] = q[ind] + np.random.normal(0,abs(sigma))
+        lqxy = 0
+        return q, lqxy
+
+    def AGjump(self, x, iter, beta):
+        """
+        Adaptive Gaussian jump in all parameters, this jump will
+        move according to ~N(0, sigma), where sigma is an adaptive parameter
+        that adjusts according to the current acceptance rate
+
+        @param x: Parameter vector at current position
+        @param iter: Iteration of sampler
+        @param beta: Inverse temperature of chain
+
+        @return: q: New position in parameter space
+        @return: lqxy: log Forward-Backward jump probability
+        """
+
+        q = x.copy()
+
+        # choose parameter
+        acc_rate = self.naccepted/iter
+        ### ask about this
+        scaling_factor = 1./100
+        for ind in range(len(q)):
+            if np.std(self._chain[:,ind]) == 0 :
+                current_sigma = 1
+            else :
+                current_sigma = np.std(self._chain[:,ind])
+            if acc_rate > 0.234:
+                sigma = current_sigma + q[ind] * scaling_factor * acc_rate
+            else :
+                sigma = current_sigma - q[ind] * scaling_factor * acc_rate
+            print(sigma)
+            q[ind] = q[ind] + np.random.normal(0,sigma)
+        lqxy = 0
+        return q, lqxy
 
     # Differential evolution jump
     def DEJump(self, x, iter, beta):
