@@ -17,9 +17,9 @@ except ImportError:
     from . import nompi4py as MPI
 
 try:
-    import acor
+    from emcee import autocorr
 except ImportError:
-    print('Do not have acor package')
+    print('Do not have emcee package')
     pass
 
 
@@ -381,7 +381,8 @@ class PTSampler(object):
             if iter % 100000 == 0 and iter > 2 * self.burn and self.MPIrank == 0:
                 try:
                     Neff = iter / \
-                            max(1, np.nanmax([acor.acor(self._AMbuffer[self.burn:(iter - 1), ii])[0]
+                            max(1, np.nanmax([autocorr.integrated_time(
+                            self._AMbuffer[self.burn:(iter - 1), ii])
                                           for ii in range(self.ndim)]))
                     print('\n {0} total samples'.format(iter))
                     print('\n {0} effective samples'.format(Neff))
@@ -796,7 +797,7 @@ class PTSampler(object):
         # small jump
         elif prob > 0.9:
             scale = 0.2
-        
+
         # small-medium jump
         # elif prob > 0.6:
             #:wq    scale = 0.5
@@ -854,7 +855,7 @@ class PTSampler(object):
         # large jump
         if prob > 0.97:
             scale = 10
-        
+
         # small jump
         elif prob > 0.9:
             scale = 0.2
