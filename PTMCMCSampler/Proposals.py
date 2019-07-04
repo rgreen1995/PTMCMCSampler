@@ -8,9 +8,7 @@ import sys
 import time
 
 
-def covarianceJumpProposalSCAM(
-    self, x, iter, beta, groups, U, S, naccepted, chain, DEbuffer
-):
+def covarianceJumpProposalSCAM(x, iter, beta, groups, U, S, naccepted, chain, DEbuffer):
     """
     Single Component Adaptive Jump Proposal. This function will occasionally
     jump in more than 1 parameter. It will also occasionally use different
@@ -77,9 +75,7 @@ def covarianceJumpProposalSCAM(
 
 
 # AM jump
-def covarianceJumpProposalAM(
-    self, x, iter, beta, groups, U, S, naccepted, chain, DEbuffer
-):
+def covarianceJumpProposalAM(x, iter, beta, groups, U, S, naccepted, chain, DEbuffer):
     """
     Single Component Adaptive Jump Proposal. This function will occasionally
     jump in more than 1 parameter. It will also occasionally use different
@@ -143,7 +139,7 @@ def covarianceJumpProposalAM(
     return q, qxy
 
 
-def SCAGjump(self, x, iter, beta, groups, U, S, naccepted, chain, DEbuffer):
+def SCAGjump(x, iter, beta, groups, U, S, naccepted, chain, DEbuffer):
     """
     Single Component Adaptive Jump Proposal. This function will occasionally
     jump in more than 1 parameter. It will also occasionally use different
@@ -184,7 +180,7 @@ def SCAGjump(self, x, iter, beta, groups, U, S, naccepted, chain, DEbuffer):
     return q, lqxy
 
 
-def MCAGjump(self, x, iter, beta, groups, U, S, naccepted, chain, DEbuffer):
+def MCAGjump(x, iter, beta, groups, U, S, naccepted, chain, DEbuffer):
     """
     Single Component Adaptive Jump Proposal. This function will occasionally
     jump in more than 1 parameter. It will also occasionally use different
@@ -226,7 +222,7 @@ def MCAGjump(self, x, iter, beta, groups, U, S, naccepted, chain, DEbuffer):
     return q, lqxy
 
 
-def AGjump(self, x, iter, beta, groups, U, S, naccepted, chain, DEbuffer):
+def AGjump(x, iter, beta, groups, U, S, naccepted, chain, DEbuffer):
     """
     Single Component Adaptive Jump Proposal. This function will occasionally
     jump in more than 1 parameter. It will also occasionally use different
@@ -268,7 +264,7 @@ def AGjump(self, x, iter, beta, groups, U, S, naccepted, chain, DEbuffer):
 
 
 # Differential evolution jump
-def DEJump(self, x, iter, beta, groups, U, S, naccepted, chain, DEbuffer):
+def DEJump(x, iter, beta, groups, U, S, naccepted, chain, DEbuffer):
     """
     Single Component Adaptive Jump Proposal. This function will occasionally
     jump in more than 1 parameter. It will also occasionally use different

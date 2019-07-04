@@ -9,7 +9,7 @@ import os
 import sys
 import time
 from .nutsjump import NUTSJump, HMCJump, MALAJump
-from . import Proposals as prop
+from . import  Proposals as prop
 
 try:
     from mpi4py import MPI
@@ -511,7 +511,7 @@ class PTSampler(object):
                 runComplete = self.comm.Iprobe(source=0, tag=55)
                 time.sleep(0.000001)  # trick to get around
 
-        return self._chain
+        return self._chain[self.burn:]
 
     def PTMCMCOneStep(self, p0, lnlike0, lnprob0, iter):
         """
