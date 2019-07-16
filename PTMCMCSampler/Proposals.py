@@ -8,6 +8,165 @@ import sys
 import time
 
 
+class ProposalError(Exception):
+    """Class to handle ProposalErrors
+
+    Parameters
+    ----------
+    message: str
+        the printed error message
+    """
+    def __init__(self, message):
+        super(ProposalError, self).__init__(message)
+
+
+class JumpProposal(object):
+    """Base class for jump proposals
+
+    Parameters
+    ----------
+    
+    Attributes
+    ----------
+    __name__: str
+        name of the class
+    """
+    def __init__(self, iter):
+        self.name = "JumpProposalBaseClass"
+        self.iter = iter
+
+    @property
+    def __name__(self):
+        return self.name
+
+    def return_new_samples(self, samples):
+        """
+        """
+        self.iter += 1
+        if self.__name__ == "JumpProposalBaseClass":
+            raise ProposalError(
+                "JumpProposal is a base class and does not return any jump "
+                "proposals")
+        return samples, 0.0
+
+
+class SingleComponentAdaptiveCovariance(JumpProposal):
+    """Chooses one parameter at a time along covariance
+    """
+    def __init__(self):
+        super(SingleComponentAdaptiveCovariance, self).__init__()
+        self.name = "SingleComponentAdaptiveCovariance"
+
+    def __call__(self):
+        """
+        """
+        return super(SingleComponentAdaptiveCovariance, self).__call__()
+
+
+class AdaptiveCovariance(JumpProposal):
+    """Moves in more than one parameter
+    """
+    def __init__(self):
+        super(AdaptiveCovariance, self).__init__()
+        self.name = "AdaptiveCovariance"
+
+
+class SingleComponentAdaptiveGaussian(JumpProposal):
+    """Single component adaptive gaussian
+    """
+    def __init__(self):
+        super(SingleComponentAdaptiveGaussian, self).__init__()
+        self.name = "SingleComponentAdaptiveGaussian"
+
+    def __call__(self):
+        """
+        """
+        return super(SingleComponentAdaptiveGaussian, self).__call__()
+
+
+class MultiComponentAdaptiveGaussian(JumpProposal):
+    """
+    """
+    def __init__(self):
+        super(MultiComponentAdaptiveGaussian, self).__init__()
+        self.name = "MultiComponentAdaptiveGaussian"
+
+    def __call__(self):
+        """
+        """
+        return super(MultiComponentAdpativeGaussian, self).__call__()
+
+
+class AdaptiveGaussian(JumpProposal):
+    """
+    """
+    def __init__(self):
+        super(AdaptiveGaussian, self).__init__()
+        self.name = "AdaptiveGaussian"
+
+    def __call__(self):
+        """
+        """
+        return super(AdaptiveGaussian, self).__call__()
+
+
+class DifferentialEvolution(JumpProposal):
+    """Class to handle the differential evolution jump proposal. This jump
+    proposal differentially evolves the old sample based on some Gaussian
+    randomisation calculated from two existing coordinates.
+
+    Parameters
+    ----------
+
+    Attributes
+    ----------
+    """
+    def __init__(self):
+        super(DifferentialEvolution, self).__init__()
+        self.name = "DifferentialEvolution"
+
+    def __call__(self):
+        """
+        ""
+        return super(DifferentialEvolution, self).__call__()
+
+
+class Normal(JumpProposal):
+    """Class to handle the normal jump proposal. The new sample is drawn from
+    a normal distribution centered around the old sample
+
+    Parameters
+    ----------
+
+    Attributes
+    ----------
+    """
+    def __init__(self, step_size):
+        super(Normal, self).__init__()
+        self.name = "Normal"
+        self.step_size = step_size
+
+    def __call__(self, samples):
+        for key in samples.keys():
+            samples[key] = np.random.normal(samples[key], self.step_size)
+        return self.return_new_samples(samples)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 def covarianceJumpProposalSCAM(x, iter, beta, groups, U, S, naccepted, chain, DEbuffer):
     """
     Single Component Adaptive Jump Proposal. This function will occasionally
