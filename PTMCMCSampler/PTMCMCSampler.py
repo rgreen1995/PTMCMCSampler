@@ -134,17 +134,55 @@ class PTSampler(object):
         self.aux = []
 
     @staticmethod
-    def check_proposal_kwargs(proposal_kwargs):
+    def check_proposal_kwargs(proposal_dict, key):
         """Check the jump proposal kwargs
 
         Parameters
         ----------
-        proposal_kwargs: dict
+        proposal_dict: dict
             dict containing the jump proposal kwargs
         """
+        self.check_specific_proposal_kwargs(key, proposal_kwargs)
+        proposal_kwargs = proposal_dict[key]
         if "weight" not in list(proposal_kwargs.keys()):
             raise Exception("Please add a weight for your jump proposal")
         return
+
+    @staticmethod
+    def check_specific_proposal_kwargs(key, proposal_kwargs):
+        """
+        """
+        func_map = {"Uniform": self._check_uniform_kwargs,
+                    "Normal": self._check_normal_kwargs}
+
+        func_map[key](proposal_kwargs)
+        return
+
+    @staticmethod
+    def _check_uniform_kwargs(proposal_kwargs):
+        """
+        """
+        specific_kwargs = ["pmin", "pmax"]
+        self._raise_exception_if_proposal_kwargs_not_correct(
+            "Uniform", specific_kwargs, proposal_kwargs)
+
+    @staticmethod
+    def _check_normal_kwargs(proposal_kwargs):
+        """
+        """
+        specific_kwargs = ["step_size"]
+        self._check_specific_proposal_kwargs(
+            "Normal", specific_kwargs, proposal_kwargs)
+
+    @staticmethod
+    def _check_specific_proposal_kwargs(name, specific_kwargs, proposal_kwargs)
+        if not all(i in proposal_kwargs.keys() for i in specific_kwargs):
+            raise AttributeError(
+                "When using the '%s' jump proposal, you must provide "
+                "%s in your jump proposal dictionary." % (
+                name, " and ".join(specific_kwargs)))
+
+        
 
     @staticmethod
     def get_proposal_object_from_name(key):
@@ -175,9 +213,9 @@ class PTSampler(object):
             proposals = self.default_proposals()
         
         for key in proposals.keys():
-            self.check_proposal_kwargs(proposals[key])
-            kwargs = proposals[key]
             name = self.get_proposal_object_from_name(key)
+            self.check_proposal_kwargs(proposals, key)
+            kwargs = proposals[key]
             self.addProposalToCycle(name(kwargs), kwargs["weight"])
 
     def initialize(
