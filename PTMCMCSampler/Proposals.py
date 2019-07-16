@@ -8,6 +8,13 @@ import sys
 import time
 
 
+__all__ = [
+    "JumpProposal", "SingleComponentAdaptiveCovariance", "AdaptiveCovariance",
+    "SingleComponentAdaptiveGaussian", "MultiComponentAdaptiveGaussian",
+    "AdaptiveGaussian", "DifferentialEvolution", "Normal", "Uniform",
+    "Prior"]
+
+
 class ProposalError(Exception):
     """Class to handle ProposalErrors
 
@@ -25,15 +32,10 @@ class JumpProposal(object):
 
     Parameters
     ----------
-    
-    Attributes
-    ----------
-    __name__: str
-        name of the class
     """
-    def __init__(self, iter):
-        self.name = "JumpProposalBaseClass"
+    def __init__(self, iter=None):
         self.iter = iter
+        self.name = "JumpProposal"
 
     @property
     def __name__(self):
@@ -47,10 +49,8 @@ class JumpProposal(object):
         samples: list
             list of new samples
         """
-        self.iter += 1
-        if self.__name__ == "JumpProposalBaseClass":
-            raise ProposalError(
-                "JumpProposal is a base class and does not return any samples")
+        if self.iter:
+            self.iter += 1
         return samples, 0.0
 
 
@@ -120,10 +120,8 @@ class DifferentialEvolution(JumpProposal):
     randomisation calculated from two existing coordinates.
 
     Parameters
-    ----------
 
     Attributes
-    ----------
     """
     def __init__(self):
         super(DifferentialEvolution, self).__init__()
@@ -131,8 +129,8 @@ class DifferentialEvolution(JumpProposal):
 
     def __call__(self):
         """
-        ""
-        return super(DifferentialEvolution, self).__call__()
+        """
+        return None
 
 
 class Normal(JumpProposal):
@@ -140,14 +138,11 @@ class Normal(JumpProposal):
     a normal distribution centered around the old sample
 
     Parameters
-    ----------
 
     Attributes
-    ----------
     """
     def __init__(self, step_size):
         super(Normal, self).__init__()
-        self.name = "Normal"
         self.step_size = step_size
 
     def __call__(self, samples):
@@ -166,10 +161,11 @@ class Uniform(JumpProposal):
     pmax: float
         maximum value fo the uniform distribution
     """
-    def __init__(self, pmin, pmax):
+    def __init__(self, kwargs):
         super(Uniform, self).__init__()
-        self.pmin = pmin
-        self.pmax = pmax
+        self.name = "Uniform"
+        self.pmin = kwargs["pmin"]
+        self.pmax = kwargs["pmax"]
 
     def __call__(self, samples):
         new_samples = np.random.uniform(self.pmin, self.pmax, len(samples))

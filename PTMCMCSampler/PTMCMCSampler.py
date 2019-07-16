@@ -9,7 +9,7 @@ import os
 import sys
 import time
 from .nutsjump import NUTSJump, HMCJump, MALAJump
-from . import  Proposals as prop
+from . import Proposals as prop
 
 try:
     from mpi4py import MPI
@@ -133,6 +133,53 @@ class PTSampler(object):
         # indicator for auxilary jumps
         self.aux = []
 
+    @staticmethod
+    def check_proposal_kwargs(proposal_kwargs):
+        """Check the jump proposal kwargs
+
+        Parameters
+        ----------
+        proposal_kwargs: dict
+            dict containing the jump proposal kwargs
+        """
+        if "weight" not in list(proposal_kwargs.keys()):
+            raise Exception("Please add a weight for your jump proposal")
+        return
+
+    @staticmethod
+    def get_proposal_object_from_name(key):
+        """Return the jump proposal object from a string
+
+        Parameters
+        ----------
+        key: str
+            string of a jump proposal
+        """
+        if hasattr(prop, key):
+            return getattr(prop, key)
+        raise AttributeError(
+            "%s not recognised as a valid jump proposal. The list of available"
+            "jump proposals are:\n\n%s" % (key, "\n".join(prop.__all__)))
+
+    @staticmethod
+    def default_proposals():
+        """Return the default proposals when no proposal is given
+        """
+        default = {"Uniform": {"pmin": 0, "pmax": 10, "weight": 20}}
+        return default
+
+    def setup_jump_proposals(self, proposals):
+        """
+        """
+        if len(proposals) == 0:
+            proposals = self.default_proposals()
+        
+        for key in proposals.keys():
+            self.check_proposal_kwargs(proposals[key])
+            kwargs = proposals[key]
+            name = self.get_proposal_object_from_name(key)
+            self.addProposalToCycle(name(kwargs), kwargs["weight"])
+
     def initialize(
         self,
         Niter,
@@ -142,15 +189,7 @@ class PTSampler(object):
         Tskip=100,
         isave=1000,
         covUpdate=1000,
-        SCAMweight=30,
-        AMweight=20,
-        DEweight=50,
-        SCAGweight=10,
-        MCAGweight=10,
-        AGweight=10,
-        NUTSweight=20,
-        HMCweight=20,
-        MALAweight=0,
+        proposals={},
         burn=10000,
         HMCstepsize=0.1,
         HMCsteps=300,
@@ -168,6 +207,7 @@ class PTSampler(object):
         @Tmin: minumum temperature to use in temperature ladder
 
         """
+        self.setup_jump_proposals(proposals)
         # get maximum number of iteration
         if maxIter is None and self.MPIrank > 0:
             maxIter = 2 * Niter
@@ -176,12 +216,6 @@ class PTSampler(object):
 
         self.ladder = ladder
         self.covUpdate = covUpdate
-        self.SCAMweight = SCAMweight
-        self.AMweight = AMweight
-        self.DEweight = DEweight
-        self.SCAGweight = SCAGweight
-        self.MCAGweight = MCAGweight
-        self.AGweight = AGweight
         self.burn = burn
         self.Tskip = Tskip
         self.thin = thin
@@ -211,7 +245,7 @@ class PTSampler(object):
         if self.logl_grad is not None and self.logp_grad is not None:
             # DOES MALA do anything with the burnin? (Not adaptive enabled yet)
             malajump = MALAJump(self.logl_grad, self.logp_grad, self.cov, self.burn)
-            self.addProposalToCycle(malajump, MALAweight)
+            #self.addProposalToCycle(malajump, MALAweight)
             if MALAweight > 0:
                 print("WARNING: MALA jumps are not working properly yet")
 
@@ -226,7 +260,7 @@ class PTSampler(object):
                 nminsteps=2,
                 nmaxsteps=HMCsteps,
             )
-            self.addProposalToCycle(hmcjump, HMCweight)
+            #self.addProposalToCycle(hmcjump, HMCweight)
 
             # Target acceptance rate (delta) should be optimal for 0.6
             nutsjump = NUTSJump(
@@ -240,22 +274,26 @@ class PTSampler(object):
                 force_epsilon=None,
                 delta=0.6,
             )
-            self.addProposalToCycle(nutsjump, NUTSweight)
+            #self.addProposalToCycle(nutsjump, NUTSweight)
 
         # add SCAM
-        self.addProposalToCycle(prop.covarianceJumpProposalSCAM, self.SCAMweight)
+        #self.addProposalToCycle(prop.covarianceJumpProposalSCAM, self.SCAMweight)
 
         # add AM
-        self.addProposalToCycle(prop.covarianceJumpProposalAM, self.AMweight)
+        #self.addProposalToCycle(prop.covarianceJumpProposalAM, self.AMweight)
 
         ## add SCAG
-        self.addProposalToCycle(prop.SCAGjump, self.SCAGweight)
+        #self.addProposalToCycle(prop.SCAGjump, self.SCAGweight)
 
         ## add MCAG
-        self.addProposalToCycle(prop.MCAGjump, self.MCAGweight)
+        #self.addProposalToCycle(prop.MCAGjump, self.MCAGweight)
 
         ## add AG
-        self.addProposalToCycle(prop.AGjump, self.AGweight)
+        #self.addProposalToCycle(prop.AGjump, self.AGweight)
+
+        #uniform = prop.Uniform(0, 10.0)
+
+        #self.addProposalToCycle(uniform, 100)
 
         # check length of jump cycle
         if len(self.propCycle) == 0:
@@ -343,15 +381,7 @@ class PTSampler(object):
         Tskip=100,
         isave=1000,
         covUpdate=1000,
-        SCAMweight=20,
-        AMweight=20,
-        DEweight=20,
-        NUTSweight=20,
-        MALAweight=20,
-        SCAGweight=10,
-        MCAGweight=10,
-        AGweight=10,
-        HMCweight=20,
+        proposals={},
         burn=10000,
         HMCstepsize=0.1,
         HMCsteps=300,
@@ -409,15 +439,7 @@ class PTSampler(object):
                 Tskip=Tskip,
                 isave=isave,
                 covUpdate=covUpdate,
-                SCAMweight=SCAMweight,
-                AMweight=AMweight,
-                DEweight=DEweight,
-                SCAGweight=SCAGweight,
-                MCAGweight=MCAGweight,
-                AGweight=AGweight,
-                NUTSweight=NUTSweight,
-                MALAweight=MALAweight,
-                HMCweight=HMCweight,
+                proposals=proposals,
                 burn=burn,
                 HMCstepsize=HMCstepsize,
                 HMCsteps=HMCsteps,
@@ -510,7 +532,6 @@ class PTSampler(object):
             if self.MPIrank > 0:
                 runComplete = self.comm.Iprobe(source=0, tag=55)
                 time.sleep(0.000001)  # trick to get around
-
         return self._chain[self.burn:]
 
     def PTMCMCOneStep(self, p0, lnlike0, lnprob0, iter):
@@ -570,7 +591,7 @@ class PTSampler(object):
 
             # randomize cycle
             if prop.DEJump not in self.propCycle:
-                self.addProposalToCycle(prop.DEJump, self.DEweight)
+                #self.addProposalToCycle(prop.DEJump, self.DEweight)
                 self.randomizeProposalCycle()
 
             # reset
@@ -578,9 +599,9 @@ class PTSampler(object):
 
         # after burn in, add DE jumps
         if (iter - 1) == self.burn and self.MPIrank == 0:
-            if self.verbose:
-                print("Adding DE jump with weight {0}".format(self.DEweight))
-            self.addProposalToCycle(prop.DEJump, self.DEweight)
+            #if self.verbose:
+            #    print("Adding DE jump with weight {0}".format(self.DEweight))
+            #self.addProposalToCycle(prop.DEJump, self.DEweight)
 
             # randomize cycle
             self.randomizeProposalCycle()
@@ -953,15 +974,15 @@ class PTSampler(object):
         # call function
         ind = np.random.randint(0, length)
         q, qxy = self.propCycle[ind](
-            x,
-            iter,
-            1 / self.temp,
-            self.groups,
-            self.U,
-            self.S,
-            self.naccepted,
-            self._chain,
-            self._DEbuffer,
+            x
+            #iter,
+            #1 / self.temp,
+            #self.groups,
+            #self.U,
+            #self.S,
+            #self.naccepted,
+            #self._chain,
+            #self._DEbuffer,
         )
 
         # axuilary jump
