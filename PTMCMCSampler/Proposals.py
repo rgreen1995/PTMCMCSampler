@@ -176,8 +176,19 @@ class Uniform(JumpProposal):
         return self.return_new_samples(new_samples)
 
 
+class Prior(JumpProposal):
+    """Draw a proposal from the prior distributions
+    """
+    def __init__(self):
+        super(Prior, self).__init__()
 
+    def __call__(self, sample, prior):
+        new_samples = self._draw_from_prior(sample, prior)
+        return self.return_new_samples(new_samples)
 
+    def _draw_from_prior(sample, prior):
+        """
+        """
 
 
 
