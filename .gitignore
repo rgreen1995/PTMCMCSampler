@@ -5,3 +5,4 @@ dist
 *.pyc
 *.txt
 *.h5
+*.egg*
