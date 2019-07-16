@@ -40,13 +40,17 @@ class JumpProposal(object):
         return self.name
 
     def return_new_samples(self, samples):
-        """
+        """Return the new samples
+
+        Parameters
+        ----------
+        samples: list
+            list of new samples
         """
         self.iter += 1
         if self.__name__ == "JumpProposalBaseClass":
             raise ProposalError(
-                "JumpProposal is a base class and does not return any jump "
-                "proposals")
+                "JumpProposal is a base class and does not return any samples")
         return samples, 0.0
 
 
@@ -147,12 +151,29 @@ class Normal(JumpProposal):
         self.step_size = step_size
 
     def __call__(self, samples):
-        for key in samples.keys():
-            samples[key] = np.random.normal(samples[key], self.step_size)
+        new_samples = [np.random.normal(i, self.step_size) for i in samples]
         return self.return_new_samples(samples)
 
 
+class Uniform(JumpProposal):
+    """Class to handle a uniform jump proposal. The new sample is drawn from
+    a uniform distribution between 2 values
 
+    Parameters
+    ----------
+    pmin: float
+        minimum value of the uniform distribution
+    pmax: float
+        maximum value fo the uniform distribution
+    """
+    def __init__(self, pmin, pmax):
+        super(Uniform, self).__init__()
+        self.pmin = pmin
+        self.pmax = pmax
+
+    def __call__(self, samples):
+        new_samples = np.random.uniform(self.pmin, self.pmax, len(samples))
+        return self.return_new_samples(new_samples)
 
 
 
