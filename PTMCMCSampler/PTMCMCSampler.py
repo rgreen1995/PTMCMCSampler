@@ -142,8 +142,8 @@ class PTSampler(object):
         proposal_dict: dict
             dict containing the jump proposal kwargs
         """
-        self.check_specific_proposal_kwargs(key, proposal_kwargs)
         proposal_kwargs = proposal_dict[key]
+        PTSampler.check_specific_proposal_kwargs(key, proposal_kwargs)
         if "weight" not in list(proposal_kwargs.keys()):
             raise Exception("Please add a weight for your jump proposal")
         return
@@ -152,8 +152,8 @@ class PTSampler(object):
     def check_specific_proposal_kwargs(key, proposal_kwargs):
         """
         """
-        func_map = {"Uniform": self._check_uniform_kwargs,
-                    "Normal": self._check_normal_kwargs}
+        func_map = {"Uniform": PTSampler._check_uniform_kwargs,
+                    "Normal": PTSampler._check_normal_kwargs}
 
         func_map[key](proposal_kwargs)
         return
@@ -163,7 +163,7 @@ class PTSampler(object):
         """
         """
         specific_kwargs = ["pmin", "pmax"]
-        self._raise_exception_if_proposal_kwargs_not_correct(
+        PTSampler._check_specific_proposal_kwargs(
             "Uniform", specific_kwargs, proposal_kwargs)
 
     @staticmethod
@@ -171,11 +171,11 @@ class PTSampler(object):
         """
         """
         specific_kwargs = ["step_size"]
-        self._check_specific_proposal_kwargs(
+        PTSampler._check_specific_proposal_kwargs(
             "Normal", specific_kwargs, proposal_kwargs)
 
     @staticmethod
-    def _check_specific_proposal_kwargs(name, specific_kwargs, proposal_kwargs)
+    def _check_specific_proposal_kwargs(name, specific_kwargs, proposal_kwargs):
         if not all(i in proposal_kwargs.keys() for i in specific_kwargs):
             raise AttributeError(
                 "When using the '%s' jump proposal, you must provide "
