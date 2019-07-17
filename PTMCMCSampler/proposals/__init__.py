@@ -4,4 +4,4 @@ from .prior import *
 from .adaptive_covariance import *
 from .normal import *
 from .uniform import *
-from .base import available_jump_proposals
+from .base import available_jump_proposals, default_jump_proposals, __all__, __default__

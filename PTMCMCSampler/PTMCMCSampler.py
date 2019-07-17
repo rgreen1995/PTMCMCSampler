@@ -134,57 +134,6 @@ class PTSampler(object):
         self.aux = []
 
     @staticmethod
-    def check_proposal_kwargs(proposal_dict, key):
-        """Check the jump proposal kwargs
-
-        Parameters
-        ----------
-        proposal_dict: dict
-            dict containing the jump proposal kwargs
-        """
-        proposal_kwargs = proposal_dict[key]
-        PTSampler.check_specific_proposal_kwargs(key, proposal_kwargs)
-        if "weight" not in list(proposal_kwargs.keys()):
-            raise Exception("Please add a weight for your jump proposal")
-        return
-
-    @staticmethod
-    def check_specific_proposal_kwargs(key, proposal_kwargs):
-        """
-        """
-        func_map = {"Uniform": PTSampler._check_uniform_kwargs,
-                    "Normal": PTSampler._check_normal_kwargs}
-
-        func_map[key](proposal_kwargs)
-        return
-
-    @staticmethod
-    def _check_uniform_kwargs(proposal_kwargs):
-        """
-        """
-        specific_kwargs = ["pmin", "pmax"]
-        PTSampler._check_specific_proposal_kwargs(
-            "Uniform", specific_kwargs, proposal_kwargs)
-
-    @staticmethod
-    def _check_normal_kwargs(proposal_kwargs):
-        """
-        """
-        specific_kwargs = ["step_size"]
-        PTSampler._check_specific_proposal_kwargs(
-            "Normal", specific_kwargs, proposal_kwargs)
-
-    @staticmethod
-    def _check_specific_proposal_kwargs(name, specific_kwargs, proposal_kwargs):
-        if not all(i in proposal_kwargs.keys() for i in specific_kwargs):
-            raise AttributeError(
-                "When using the '%s' jump proposal, you must provide "
-                "%s in your jump proposal dictionary." % (
-                name, " and ".join(specific_kwargs)))
-
-        
-
-    @staticmethod
     def get_proposal_object_from_name(key):
         """Return the jump proposal object from a string
 
@@ -200,23 +149,33 @@ class PTSampler(object):
             "jump proposals are:\n\n%s" % (key, "\n".join(prop.__all__)))
 
     @staticmethod
-    def default_proposals():
+    def default_weights():
         """Return the default proposals when no proposal is given
         """
-        default = {"Uniform": {"pmin": 0, "pmax": 10, "weight": 20}}
-        return default
+        return {i: 1 for i in prop.__default__} 
 
-    def setup_jump_proposals(self, proposals):
+    def setup_jump_proposals(self, weights, jump_proposal_arguments):
+        """Setup jump proposals
+
+        Parameters
+        ----------
+        weights: dict
+            dictionary of weights
+        jump_proposal_arguments: dict
+            dictionary of jump proposal arguments
         """
-        """
-        if len(proposals) == 0:
-            proposals = self.default_proposals()
-        
-        for key in proposals.keys():
+        if len(weights) == 0:
+            weights = self.default_weights()
+
+        for key in weights.keys():
             name = self.get_proposal_object_from_name(key)
-            self.check_proposal_kwargs(proposals, key)
-            kwargs = proposals[key]
-            self.addProposalToCycle(name(kwargs), kwargs["weight"])
+
+            if key in jump_proposal_arguments.keys():
+                kwargs = jump_proposal_arguments[key]
+            else:
+                kwargs = None
+            self.addProposalToCycle(name(kwargs), weights[key])
+        return
 
     def initialize(
         self,
@@ -227,7 +186,8 @@ class PTSampler(object):
         Tskip=100,
         isave=1000,
         covUpdate=1000,
-        proposals={},
+        weights={},
+        jump_proposal_arguments={},
         burn=10000,
         HMCstepsize=0.1,
         HMCsteps=300,
@@ -245,7 +205,7 @@ class PTSampler(object):
         @Tmin: minumum temperature to use in temperature ladder
 
         """
-        self.setup_jump_proposals(proposals)
+        self.setup_jump_proposals(weights, jump_proposal_arguments)
         # get maximum number of iteration
         if maxIter is None and self.MPIrank > 0:
             maxIter = 2 * Niter
@@ -419,7 +379,8 @@ class PTSampler(object):
         Tskip=100,
         isave=1000,
         covUpdate=1000,
-        proposals={},
+        weights={},
+        jump_proposal_arguments={},
         burn=10000,
         HMCstepsize=0.1,
         HMCsteps=300,
@@ -477,7 +438,8 @@ class PTSampler(object):
                 Tskip=Tskip,
                 isave=isave,
                 covUpdate=covUpdate,
-                proposals=proposals,
+                weights=weights,
+                jump_proposal_arguments=jump_proposal_arguments,
                 burn=burn,
                 HMCstepsize=HMCstepsize,
                 HMCsteps=HMCsteps,

@@ -7,11 +7,23 @@ __all__ = [
     "AdaptiveGaussian", "DifferentialEvolution", "Normal", "Uniform",
     "Prior"]
 
+__default__ = [
+    "SingleComponentAdaptiveCovariance", "AdaptiveCovariance",
+    "SingleComponentAdaptiveGaussian", "MultiComponentAdaptiveGaussian",
+    "AdaptiveGaussian", "DifferentialEvolution"
+    ]
+
 
 def available_jump_proposals():
     """Print the available jump proposals
     """
     print("Available jump proposals:\n\n%s" % ("\n".join(__all__)))
+
+
+def default_jump_proposals():
+    """Print the default jump proposals
+    """
+    print("Default jump proposals:\n\n%s" % ("\n".join(__default__)))
 
 
 class ProposalError(Exception):
@@ -66,6 +78,12 @@ class JumpProposal(object):
         keys: list
             list of kwargs that are needed for a specific jump proposal
         """
+        if kwargs == None and keys != []:
+            raise ProposalError(
+                "The jump proposal %s requires you to pass the arguments %s. "
+                "Please pass the arguments with the `jump_proposal_arguments` "
+                "kwarg to the sampler object" % (self.name, " and ".join(keys)))
+
         if not all(i in kwargs.keys() for i in keys):
             raise ProposalError(
                 "The jump proposal %s requires you to pass the arguments %s. "
