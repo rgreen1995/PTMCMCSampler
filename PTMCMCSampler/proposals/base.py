@@ -37,8 +37,8 @@ class JumpProposal(object):
         self.name = "JumpProposal"
         self.required_kwargs = {
             "SingleComponentAdaptiveCovariance": ["groups", "beta", "U", "S"],
-            "AdaptiveCovariance": [],
-            "SingleComponentAdaptiveGaussian": [],
+            "AdaptiveCovariance": ["groups", "beta", "U", "S"],
+            "SingleComponentAdaptiveGaussian": ["naccepted", "iter", "chain"],
             "MultiComponentAdaptiveGaussian": ["naccepted", "iter", "chain"],
             "AdaptiveGaussian": ["naccepted", "iter", "chain"],
             "DifferentialEvolution": ["beta", "groups", "DEBuffer"],
