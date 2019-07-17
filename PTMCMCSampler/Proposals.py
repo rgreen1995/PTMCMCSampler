@@ -47,6 +47,31 @@ class JumpProposal(object):
         new_samples = func(samples)
         return self.return_new_samples(new_samples)
 
+    @staticmethod
+    def check_kwargs(kwargs, keys):
+        """Check that the kwargs are correct for each jump proposal
+
+        Parameters
+        ----------
+        kwargs: dict
+            dictionary of kwargs
+        keys: list
+            list of kwargs that are needed for a specific jump proposal
+        """
+        if not all(i in kwargs.keys() for i in keys):
+            raise ProposalError("Please provide %s" % (" and ".join(keys)))
+
+    def assign_kwargs(self, kwargs):
+        """Assign the kwargs to the class
+
+        Parameters
+        ----------
+        kwargs: dict
+            dictionary of kwargs
+        """
+        for i in kwargs.keys():
+            setattr(self, i, kwargs[i])
+
     def return_new_samples(self, samples):
         """Return the new samples
 
@@ -192,7 +217,10 @@ class Normal(JumpProposal):
     """
     def __init__(self, kwargs):
         super(Normal, self).__init__()
-        self.step_size = kwargs["step_size"]
+        required_kwargs = ["step_size"]
+        self.name = "Normal"
+        self.check_kwargs(kwargs, required_kwargs)
+        self.assign_kwargs(kwargs)
 
     def __call__(self, samples):
         return super(Normal, self).__call__(self.jump, samples)
@@ -222,9 +250,10 @@ class Uniform(JumpProposal):
     """
     def __init__(self, kwargs):
         super(Uniform, self).__init__()
+        required_kwargs = ["pmin", "pmax"]
         self.name = "Uniform"
-        self.pmin = kwargs["pmin"]
-        self.pmax = kwargs["pmax"]
+        self.check_kwargs(kwargs, required_kwargs)
+        self.assign_kwargs(kwargs)
 
     def __call__(self, samples):
         return super(Uniform, self).__call__(self.jump, samples)
