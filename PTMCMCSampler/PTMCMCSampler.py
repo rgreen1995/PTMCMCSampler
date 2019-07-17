@@ -9,7 +9,7 @@ import os
 import sys
 import time
 from .nutsjump import NUTSJump, HMCJump, MALAJump
-from . import Proposals as prop
+from . import proposals as prop
 
 try:
     from mpi4py import MPI
