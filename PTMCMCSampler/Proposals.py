@@ -7,12 +7,17 @@ import os
 import sys
 import time
 
-
 __all__ = [
     "JumpProposal", "SingleComponentAdaptiveCovariance", "AdaptiveCovariance",
     "SingleComponentAdaptiveGaussian", "MultiComponentAdaptiveGaussian",
     "AdaptiveGaussian", "DifferentialEvolution", "Normal", "Uniform",
     "Prior"]
+
+
+def avaiable_jump_proposals():
+    """Print the available jump proposals
+    """
+    print("Available jump proposals:\n\n%s" % ("\n".join(__all__)))
 
 
 class ProposalError(Exception):
