@@ -6,3 +6,4 @@ dist
 *.txt
 *.h5
 *.egg*
+*.ipynb
