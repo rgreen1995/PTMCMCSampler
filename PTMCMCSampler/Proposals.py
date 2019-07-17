@@ -41,6 +41,12 @@ class JumpProposal(object):
     def __name__(self):
         return self.name
 
+    def __call__(self, func, samples):
+        """
+        """
+        new_samples = func(samples)
+        return self.return_new_samples(new_samples)
+
     def return_new_samples(self, samples):
         """Return the new samples
 
@@ -120,17 +126,60 @@ class DifferentialEvolution(JumpProposal):
     randomisation calculated from two existing coordinates.
 
     Parameters
+    ----------
+    kwargs: dict
+        dictionary of kwargs
 
     Attributes
+    ----------
+    iter: int
+        iteration of the sampler
+    beta: float
+        inverse temperature of the chain
     """
-    def __init__(self):
+    def __init__(self, kwargs):
         super(DifferentialEvolution, self).__init__()
         self.name = "DifferentialEvolution"
+        self.iter = kwargs["iter"]
+        self.beta = kwargs["beta"]
+        self.groups = kwargs["groups"]
+        self.DEBuffer = kwargs["DEBuffer"]
 
-    def __call__(self):
+    def __call__(self, samples):
+        return super(DifferentialEvolution, self).__call__(self.jump, self.samples)
+
+    def jump(self, samples):
+        """Return the new samples assuming a Differential Evolution jump
+        proposal
+
+        Parameters
+        ----------
+        samples: list
+            list of samples
         """
-        """
-        return None
+        jumpind = np.random.randint(0, len(self.groups))
+        ndim = len(groups[jumpind])
+
+        bufsize = np.alen(self.DEbuffer)
+
+        mm = np.random.randint(0, bufsize)
+        nn = np.random.randint(0, bufsize)
+        while mm == nn:
+            nn = np.random.randint(0, bufsize)
+
+        prob = np.random.rand()
+        if prob > 0.5:
+            scale = 1.0
+        else:
+            rand = np.random.rand()
+            scale = rand * 2.4 / np.sqrt(2 * ndim) * np.sqrt(1 / self.beta)
+
+        for ii in range(ndim):
+            first_term = self.DEbuffer[mm, groups[jumpind][ii]]
+            second_term = self.DEbuffer[nn, groups[jumpind][ii]]
+            sigma = first_term - second_term
+            samples[groups[jumpind][ii]] += scale * sigma
+        return samples
 
 
 class Normal(JumpProposal):
@@ -141,13 +190,23 @@ class Normal(JumpProposal):
 
     Attributes
     """
-    def __init__(self, step_size):
+    def __init__(self, kwargs):
         super(Normal, self).__init__()
-        self.step_size = step_size
+        self.step_size = kwargs["step_size"]
 
     def __call__(self, samples):
+        return super(Normal, self).__call__(self.jump, samples)
+
+    def jump(self, samples):
+        """Return the new samples assuming a Normal jump proposal
+
+        Parameters
+        ----------
+        samples: list
+            list of samples
+        """
         new_samples = [np.random.normal(i, self.step_size) for i in samples]
-        return self.return_new_samples(samples)
+        return new_samples
 
 
 class Uniform(JumpProposal):
@@ -168,8 +227,18 @@ class Uniform(JumpProposal):
         self.pmax = kwargs["pmax"]
 
     def __call__(self, samples):
+        return super(Uniform, self).__call__(self.jump, samples)
+
+    def jump(self, samples):
+        """Return the new samples assuming a Uniform jump proposal
+
+        Parameters
+        ----------
+        samples: list
+            list of samples
+        """
         new_samples = np.random.uniform(self.pmin, self.pmax, len(samples))
-        return self.return_new_samples(new_samples)
+        return new_samples
 
 
 class Prior(JumpProposal):
@@ -178,7 +247,7 @@ class Prior(JumpProposal):
     def __init__(self):
         super(Prior, self).__init__()
 
-    def __call__(self, sample, prior):
+    def __call__(self, samples, prior):
         new_samples = self._draw_from_prior(sample, prior)
         return self.return_new_samples(new_samples)
 
