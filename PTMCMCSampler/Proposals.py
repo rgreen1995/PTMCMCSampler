@@ -47,8 +47,7 @@ class JumpProposal(object):
         new_samples = func(samples)
         return self.return_new_samples(new_samples)
 
-    @staticmethod
-    def check_kwargs(kwargs, keys):
+    def check_kwargs(self, kwargs, keys):
         """Check that the kwargs are correct for each jump proposal
 
         Parameters
@@ -58,9 +57,12 @@ class JumpProposal(object):
         keys: list
             list of kwargs that are needed for a specific jump proposal
         """
-        for i in keys:
-            if i not in kwargs.keys():
-                raise ProposalError("Please provide %s" % (i))
+        if not all(i in kwargs.keys() for i in keys):
+            raise ProposalError(
+                "The jump proposal %s requires you to pass the arguments %s. "
+                "You have passed %s" % (
+                        self.name, " and ".join(keys),
+                        " and ".join(kwargs.keys())))
 
     def assign_kwargs(self, kwargs):
         """Assign the kwargs to the class
@@ -193,13 +195,6 @@ class DifferentialEvolution(JumpProposal):
     ----------
     kwargs: dict
         dictionary of kwargs
-
-    Attributes
-    ----------
-    iter: int
-        iteration of the sampler
-    beta: float
-        inverse temperature of the chain
     """
     def __init__(self, kwargs):
         super(DifferentialEvolution, self).__init__()
@@ -251,8 +246,9 @@ class Normal(JumpProposal):
     a normal distribution centered around the old sample
 
     Parameters
-
-    Attributes
+    ----------
+    kwargs: dict
+        dictionary of kwargs
     """
     def __init__(self, kwargs):
         super(Normal, self).__init__()
@@ -282,10 +278,8 @@ class Uniform(JumpProposal):
 
     Parameters
     ----------
-    pmin: float
-        minimum value of the uniform distribution
-    pmax: float
-        maximum value fo the uniform distribution
+    kwargs: dict
+        dictionary of kwargs
     """
     def __init__(self, kwargs):
         super(Uniform, self).__init__()
