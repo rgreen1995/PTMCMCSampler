@@ -8,13 +8,13 @@ import sys
 import time
 
 __all__ = [
-    "JumpProposal", "SingleComponentAdaptiveCovariance", "AdaptiveCovariance",
+    "SingleComponentAdaptiveCovariance", "AdaptiveCovariance",
     "SingleComponentAdaptiveGaussian", "MultiComponentAdaptiveGaussian",
     "AdaptiveGaussian", "DifferentialEvolution", "Normal", "Uniform",
     "Prior"]
 
 
-def avaiable_jump_proposals():
+def available_jump_proposals():
     """Print the available jump proposals
     """
     print("Available jump proposals:\n\n%s" % ("\n".join(__all__)))
@@ -41,6 +41,16 @@ class JumpProposal(object):
     def __init__(self, iter=None):
         self.iter = iter
         self.name = "JumpProposal"
+        self.required_kwargs = {
+            "SingleComponentAdaptiveCovariance": ["groups", "beta", "U", "S"],
+            "AdaptiveCovariance": [],
+            "SingleComponentAdaptiveGaussian": [],
+            "MultiComponentAdaptiveGaussian": ["naccepted", "iter", "chain"],
+            "AdaptiveGaussian": ["naccepted", "iter", "chain"],
+            "DifferentialEvolution": ["beta", "groups", "DEBuffer"],
+            "Normal": ["step_size"],
+            "Uniform: ["pmin", "pmax"],
+            "Prior": []}
 
     @property
     def __name__(self):
@@ -99,9 +109,8 @@ class SingleComponentAdaptiveCovariance(JumpProposal):
     def __init__(self):
         super(SingleComponentAdaptiveCovariance, self).__init__()
         self.name = "SingleComponentAdaptiveCovariance"
-        required_kwargs = ["groups", "beta", "U", "S"]
-        self.check_kwargs(kwargs, required_kwargs)
-        self.assign_kwargs(required_kwargs, kwargs)
+        self.check_kwargs(kwargs, self.required_kwargs[self.name])
+        self.assign_kwargs(self.required_kwargs[self.name], kwargs)
 
     def __call__(self, samples):
         return super(SingleComponentAdaptiveCovariance, self).__call__(
@@ -171,9 +180,8 @@ class MultiComponentAdaptiveGaussian(JumpProposal):
     def __init__(self):
         super(MultiComponentAdaptiveGaussian, self).__init__()
         self.name = "MultiComponentAdaptiveGaussian"
-        required_kwargs = ["naccepted", "iter", "chain"]
-        self.check_kwargs(kwargs, required_kwargs)
-        self.assign_kwargs(required_kwargs, kwargs)
+        self.check_kwargs(kwargs, self.required_kwargs[self.name])
+        self.assign_kwargs(self.required_kwargs[self.name], kwargs)
 
     def __call__(self):
         return super(MultiComponentAdpativeGaussian, self).__call__(
@@ -215,10 +223,9 @@ class AdaptiveGaussian(JumpProposal):
     """
     def __init__(self):
         super(AdaptiveGaussian, self).__init__()
-        required_kwargs = ["naccepted", "iter", "chain"]
         self.name = "AdaptiveGaussian"
-        self.check_kwargs(kwargs, required_kwargs)
-        self.assign_kwargs(required_kwargs, kwargs)
+        self.check_kwargs(kwargs, self.required_kwargs[self.name])
+        self.assign_kwargs(self.required_kwargs[self.name], kwargs)
 
     def __call__(self):
         return super(AdaptiveGaussian, self).__call__(self.jump, self.samples)
@@ -263,10 +270,9 @@ class DifferentialEvolution(JumpProposal):
     """
     def __init__(self, kwargs):
         super(DifferentialEvolution, self).__init__()
-        required_kwargs = ["beta", "groups", "DEBuffer"]
         self.name = "DifferentialEvolution"
-        self.check_kwargs(kwargs, required_kwargs)
-        self.assign_kwargs(required_kwargs, kwargs)
+        self.check_kwargs(kwargs, self.required_kwargs[self.name])
+        self.assign_kwargs(self.required_kwargs[self.name], kwargs)
 
     def __call__(self, samples):
         return super(DifferentialEvolution, self).__call__(self.jump, self.samples)
@@ -317,10 +323,9 @@ class Normal(JumpProposal):
     """
     def __init__(self, kwargs):
         super(Normal, self).__init__()
-        required_kwargs = ["step_size"]
         self.name = "Normal"
-        self.check_kwargs(kwargs, required_kwargs)
-        self.assign_kwargs(required_kwargs, kwargs)
+        self.check_kwargs(kwargs, self.required_kwargs[self.name])
+        self.assign_kwargs(self.required_kwargs[self.name], kwargs)
 
     def __call__(self, samples):
         return super(Normal, self).__call__(self.jump, samples)
@@ -348,10 +353,9 @@ class Uniform(JumpProposal):
     """
     def __init__(self, kwargs):
         super(Uniform, self).__init__()
-        required_kwargs = ["pmin", "pmax"]
         self.name = "Uniform"
-        self.check_kwargs(kwargs, required_kwargs)
-        self.assign_kwargs(required_kwargs, kwargs)
+        self.check_kwargs(kwargs, self.required_kwargs[self.name])
+        self.assign_kwargs(self.required_kwargs[self.name], kwargs)
 
     def __call__(self, samples):
         return super(Uniform, self).__call__(self.jump, samples)
