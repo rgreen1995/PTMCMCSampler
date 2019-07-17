@@ -58,8 +58,9 @@ class JumpProposal(object):
         keys: list
             list of kwargs that are needed for a specific jump proposal
         """
-        if not all(i in kwargs.keys() for i in keys):
-            raise ProposalError("Please provide %s" % (" and ".join(keys)))
+        for i in keys:
+            if i not in kwargs.keys():
+                raise ProposalError("Please provide %s" % (i))
 
     def assign_kwargs(self, kwargs):
         """Assign the kwargs to the class
@@ -91,11 +92,49 @@ class SingleComponentAdaptiveCovariance(JumpProposal):
     def __init__(self):
         super(SingleComponentAdaptiveCovariance, self).__init__()
         self.name = "SingleComponentAdaptiveCovariance"
+        required_kwargs = ["groups", "beta", "U", "S"]
+        self.check_kwargs(kwargs, required_kwargs)
+        self.assign_kwargs(kwargs)
 
-    def __call__(self):
+    def __call__(self, samples):
+        return super(SingleComponentAdaptiveCovariance, self).__call__(
+            self.jump, samples)
+
+    def jump(self, samples):
+        """Return the new samples assuming a Differential Evolution jump
+        proposal
+
+        Parameters
+        ----------
+        samples: list
+            list of samples
         """
-        """
-        return super(SingleComponentAdaptiveCovariance, self).__call__()
+        new_samples = samples.copy()
+
+        jumpind = np.random.randint(0, len(self.groups))
+        ndim = len(self.groups[jumpind])
+
+        prob = np.random.rand()
+        if prob > 0.97:
+            scale = 10
+        elif prob > 0.9:
+            scale = 0.2
+        else:
+            scale = 1.0
+
+        if 1 / self.beta <= 100:
+            scale *= np.sqrt(1 / self.beta)
+
+        ind = np.unique(np.random.randint(0, ndim, 1))
+        neff = len(ind)
+        cd = 2.4 / np.sqrt(2 * neff) * scale
+
+        new_samples[self.groups[jumpind]] += (
+            np.random.randn() * cd * np.sqrt(self.S[jumpind][ind]) *
+            self.U[jumpind][:, ind].flatten()
+        )
+
+        return new_samples
 
 
 class AdaptiveCovariance(JumpProposal):
@@ -164,11 +203,10 @@ class DifferentialEvolution(JumpProposal):
     """
     def __init__(self, kwargs):
         super(DifferentialEvolution, self).__init__()
+        required_kwargs = ["beta", "groups", "DEBuffer"]
         self.name = "DifferentialEvolution"
-        self.iter = kwargs["iter"]
-        self.beta = kwargs["beta"]
-        self.groups = kwargs["groups"]
-        self.DEBuffer = kwargs["DEBuffer"]
+        self.check_kwargs(kwargs, required_kwargs)
+        self.assign_kwargs(kwargs)
 
     def __call__(self, samples):
         return super(DifferentialEvolution, self).__call__(self.jump, self.samples)
@@ -182,6 +220,7 @@ class DifferentialEvolution(JumpProposal):
         samples: list
             list of samples
         """
+        new_samples = samples.copy()
         jumpind = np.random.randint(0, len(self.groups))
         ndim = len(groups[jumpind])
 
@@ -203,8 +242,8 @@ class DifferentialEvolution(JumpProposal):
             first_term = self.DEbuffer[mm, groups[jumpind][ii]]
             second_term = self.DEbuffer[nn, groups[jumpind][ii]]
             sigma = first_term - second_term
-            samples[groups[jumpind][ii]] += scale * sigma
-        return samples
+            new_samples[groups[jumpind][ii]] += scale * sigma
+        return new_samples
 
 
 class Normal(JumpProposal):
