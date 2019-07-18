@@ -20,10 +20,10 @@ class Normal(JumpProposal):
         self.check_kwargs(kwargs, self.required_kwargs[self.name])
         self.assign_kwargs(self.required_kwargs[self.name], kwargs)
 
-    def __call__(self, samples):
-        return super(Normal, self).__call__(self.jump, samples)
+    def __call__(self, samples, kwargs):
+        return super(Normal, self).__call__(self.jump, samples, kwargs)
 
-    def jump(self, samples):
+    def jump(self, samples, kwargs):
         """Return the new samples assuming a Normal jump proposal
 
         Parameters

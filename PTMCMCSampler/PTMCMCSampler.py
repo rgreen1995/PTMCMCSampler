@@ -154,15 +154,17 @@ class PTSampler(object):
         """
         return {i: 1 for i in prop.__default__} 
 
-    def setup_jump_proposals(self, weights, jump_proposal_arguments):
-        """Setup jump proposals
+    def initialize_jump_proposals(self, weights, initalize_jump_proposal_kwargs):
+        """Initialize the jump proposal classes and add them to the proposal
+        cycle
 
         Parameters
         ----------
         weights: dict
             dictionary of weights
-        jump_proposal_arguments: dict
-            dictionary of jump proposal arguments
+        initialize_jump_proposal_kwargs: dict
+            dictionary of keyword arguments to initialize the jump proposal
+            class
         """
         if len(weights) == 0:
             weights = self.default_weights()
@@ -170,8 +172,8 @@ class PTSampler(object):
         for key in weights.keys():
             name = self.get_proposal_object_from_name(key)
 
-            if key in jump_proposal_arguments.keys():
-                kwargs = jump_proposal_arguments[key]
+            if key in initalize_jump_proposal_kwargs.keys():
+                kwargs = initalize_jump_proposal_kwargs[key]
             else:
                 kwargs = None
             self.addProposalToCycle(name(kwargs), weights[key])
@@ -187,7 +189,7 @@ class PTSampler(object):
         isave=1000,
         covUpdate=1000,
         weights={},
-        jump_proposal_arguments={},
+        initialize_jump_proposal_kwargs={},
         burn=10000,
         HMCstepsize=0.1,
         HMCsteps=300,
@@ -205,7 +207,6 @@ class PTSampler(object):
         @Tmin: minumum temperature to use in temperature ladder
 
         """
-        self.setup_jump_proposals(weights, jump_proposal_arguments)
         # get maximum number of iteration
         if maxIter is None and self.MPIrank > 0:
             maxIter = 2 * Niter
@@ -221,6 +222,7 @@ class PTSampler(object):
         self.Niter = Niter
         self.neff = neff
         self.tstart = 0
+        self.iter = i0
 
         N = int(maxIter / thin)
 
@@ -243,9 +245,9 @@ class PTSampler(object):
         if self.logl_grad is not None and self.logp_grad is not None:
             # DOES MALA do anything with the burnin? (Not adaptive enabled yet)
             malajump = MALAJump(self.logl_grad, self.logp_grad, self.cov, self.burn)
-            #self.addProposalToCycle(malajump, MALAweight)
-            if MALAweight > 0:
+            if "MALA" in list(weights.keys()):
                 print("WARNING: MALA jumps are not working properly yet")
+                self.addProposalToCycle(malajump, weights["MALA"])
 
             # Perhaps have an option to adaptively tune the mass matrix?
             # Now that is done by defaulk
@@ -258,7 +260,8 @@ class PTSampler(object):
                 nminsteps=2,
                 nmaxsteps=HMCsteps,
             )
-            #self.addProposalToCycle(hmcjump, HMCweight)
+            if "HMC" in list(weights.keys()):
+                self.addProposalToCycle(hmcjump, weights["HMC"])
 
             # Target acceptance rate (delta) should be optimal for 0.6
             nutsjump = NUTSJump(
@@ -272,33 +275,8 @@ class PTSampler(object):
                 force_epsilon=None,
                 delta=0.6,
             )
-            #self.addProposalToCycle(nutsjump, NUTSweight)
-
-        # add SCAM
-        #self.addProposalToCycle(prop.covarianceJumpProposalSCAM, self.SCAMweight)
-
-        # add AM
-        #self.addProposalToCycle(prop.covarianceJumpProposalAM, self.AMweight)
-
-        ## add SCAG
-        #self.addProposalToCycle(prop.SCAGjump, self.SCAGweight)
-
-        ## add MCAG
-        #self.addProposalToCycle(prop.MCAGjump, self.MCAGweight)
-
-        ## add AG
-        #self.addProposalToCycle(prop.AGjump, self.AGweight)
-
-        #uniform = prop.Uniform(0, 10.0)
-
-        #self.addProposalToCycle(uniform, 100)
-
-        # check length of jump cycle
-        if len(self.propCycle) == 0:
-            raise ValueError("No jump proposals specified!")
-
-        # randomize cycle
-        self.randomizeProposalCycle()
+            if "nuts" in list(weights.keys()):
+                self.addProposalToCycle(nutsjump, weights["nuts"])
 
         # setup default temperature ladder
         if self.ladder is None:
@@ -316,6 +294,15 @@ class PTSampler(object):
 
         # write hot chains
         self.writeHotChains = writeHotChains
+
+        self.initialize_jump_proposals(weights, initialize_jump_proposal_kwargs)
+
+        # check length of jump cycle
+        if len(self.propCycle) == 0:
+            raise ValueError("No jump proposals specified!")
+
+        # randomize cycle
+        self.randomizeProposalCycle()
 
         self.resumeLength = 0
         if self.resume and os.path.isfile(self.fname):
@@ -380,7 +367,7 @@ class PTSampler(object):
         isave=1000,
         covUpdate=1000,
         weights={},
-        jump_proposal_arguments={},
+        initialize_jump_proposal_kwargs={},
         burn=10000,
         HMCstepsize=0.1,
         HMCsteps=300,
@@ -439,7 +426,7 @@ class PTSampler(object):
                 isave=isave,
                 covUpdate=covUpdate,
                 weights=weights,
-                jump_proposal_arguments=jump_proposal_arguments,
+                initialize_jump_proposal_kwargs=initialize_jump_proposal_kwargs,
                 burn=burn,
                 HMCstepsize=HMCstepsize,
                 HMCsteps=HMCsteps,
@@ -450,6 +437,8 @@ class PTSampler(object):
                 writeHotChains=writeHotChains,
                 hotChain=hotChain,
             )
+
+        self.jump_proposal_kwargs = {}
 
         ### compute lnprob for initial point in chain ###
 
@@ -961,6 +950,19 @@ class PTSampler(object):
         # randomize proposal cycle
         self.randomizedPropCycle = [self.propCycle[ind] for ind in index]
 
+    def update_jump_proposal_kwargs(self, iter):
+        """Update the jump proposal kwargs
+        """
+        self.jump_proposal_kwargs = {
+            "iter": iter,
+            "beta": 1 / self.temp,
+            "groups": self.groups,
+            "U": self.U,
+            "S": self.S,
+            "naccepted": self.naccepted,
+            "chain": self._chain,
+            "DEBuffer": self._DEbuffer}
+
     # call proposal functions from cycle
     def _jump(self, x, iter):
         """
@@ -973,17 +975,12 @@ class PTSampler(object):
 
         # call function
         ind = np.random.randint(0, length)
-        q, qxy = self.propCycle[ind](
-            x
-            #iter,
-            #1 / self.temp,
-            #self.groups,
-            #self.U,
-            #self.S,
-            #self.naccepted,
-            #self._chain,
-            #self._DEbuffer,
-        )
+
+
+        self.update_jump_proposal_kwargs(iter)
+
+
+        q, qxy = self.propCycle[ind](x, self.jump_proposal_kwargs)
 
         # axuilary jump
         if len(self.aux) > 0:

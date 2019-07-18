@@ -18,13 +18,11 @@ class DifferentialEvolution(JumpProposal):
     def __init__(self, kwargs):
         super(DifferentialEvolution, self).__init__()
         self.name = "DifferentialEvolution"
-        self.check_kwargs(kwargs, self.required_kwargs[self.name])
-        self.assign_kwargs(self.required_kwargs[self.name], kwargs)
 
-    def __call__(self, samples):
-        return super(DifferentialEvolution, self).__call__(self.jump, self.samples)
+    def __call__(self, samples, kwargs):
+        return super(DifferentialEvolution, self).__call__(self.jump, self.samples, kwargs)
 
-    def jump(self, samples):
+    def jump(self, samples, kwargs):
         """Return the new samples assuming a Differential Evolution jump
         proposal
 
@@ -33,6 +31,9 @@ class DifferentialEvolution(JumpProposal):
         samples: list
             list of samples
         """
+        self.check_kwargs(kwargs, self.required_kwargs[self.name])
+        self.assign_kwargs(self.required_kwargs[self.name], kwargs)
+
         new_samples = samples.copy()
         jumpind = np.random.randint(0, len(self.groups))
         ndim = len(groups[jumpind])
@@ -55,4 +56,7 @@ class DifferentialEvolution(JumpProposal):
             first_term = self.DEbuffer[mm, groups[jumpind][ii]]
             second_term = self.DEbuffer[nn, groups[jumpind][ii]]
             sigma = first_term - second_term
+            new_samples[groups[jumpind][ii]] += scale * sigma
+        return new_samples
 
+        

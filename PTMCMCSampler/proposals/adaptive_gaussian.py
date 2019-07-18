@@ -10,19 +10,16 @@ class SingleComponentAdaptiveGaussian(JumpProposal):
     chooses one parameter at random and moves according to a normal
     distribution where sigma is an adaptive parameter that adjusts according
     to the current acceptance rate
-
-    Parameters
-    ----------
     """
-    def __init__(self):
+    def __init__(self, kwargs=None):
         super(SingleComponentAdaptiveGaussian, self).__init__()
         self.name = "SingleComponentAdaptiveGaussian"
 
-    def __call__(self, samples):
+    def __call__(self, samples, kwargs):
         return super(SingleComponentAdaptiveGaussian, self).__call__(
-            self.jump, samples)
+            self.jump, samples, kwargs)
 
-    def jump(self, samples):
+    def jump(self, samples, kwargs):
         """Return the new samples assuming a Differential Evolution jump
         proposal
 
@@ -31,6 +28,8 @@ class SingleComponentAdaptiveGaussian(JumpProposal):
         samples: list
             list of samples
         """
+        self.check_kwargs(kwargs, self.required_kwargs[self.name])
+        self.assign_kwargs(self.required_kwargs[self.name], kwargs)
         new_samples = samples.copy()
 
         # choose parameter
@@ -66,17 +65,15 @@ class MultiComponentAdaptiveGaussian(JumpProposal):
     kwargs: dict
         dictionary of kwargs
     """
-    def __init__(self, kwargs):
+    def __init__(self, kwargs=None):
         super(MultiComponentAdaptiveGaussian, self).__init__()
         self.name = "MultiComponentAdaptiveGaussian"
-        self.check_kwargs(kwargs, self.required_kwargs[self.name])
-        self.assign_kwargs(self.required_kwargs[self.name], kwargs)
 
     def __call__(self):
         return super(MultiComponentAdpativeGaussian, self).__call__(
-            self.jump, self.samples)
+            self.jump, self.samples, kwargs)
 
-    def jump(self, samples):
+    def jump(self, samples, kwargs):
         """Return the new samples assuming a Differential Evolution jump
         proposal
 
@@ -85,6 +82,9 @@ class MultiComponentAdaptiveGaussian(JumpProposal):
         samples: list
             list of samples
         """
+        self.check_kwargs(kwargs, self.required_kwargs[self.name])
+        self.assign_kwargs(self.required_kwargs[self.name], kwargs)
+
         new_samples = samples.copy()
         n_jump_ind = np.random.randint(0, len(new_samples))
         jumpind = np.random.randint(0, len(new_samples), n_jump_ind)
@@ -111,22 +111,16 @@ class AdaptiveGaussian(JumpProposal):
     parameters and move them according to a normal distribution where sigma is
     an adaptive parameter that adjusts according to the current acceptance
     rate
-
-    Parameters
-    ----------
-    kwargs: dict
-        dictionary of kwargs
     """
-    def __init__(self, kwargs):
+    def __init__(self, kwargs=None):
         super(AdaptiveGaussian, self).__init__()
         self.name = "AdaptiveGaussian"
-        self.check_kwargs(kwargs, self.required_kwargs[self.name])
-        self.assign_kwargs(self.required_kwargs[self.name], kwargs)
 
-    def __call__(self):
-        return super(AdaptiveGaussian, self).__call__(self.jump, self.samples)
+    def __call__(self, samples, kwargs):
+        return super(AdaptiveGaussian, self).__call__(self.jump,
+            samples, kwargs)
 
-    def jump(self, samples):
+    def jump(self, samples, kwargs):
         """Return the new samples assuming a Differential Evolution jump
         proposal
 
@@ -134,7 +128,12 @@ class AdaptiveGaussian(JumpProposal):
         ----------
         samples: list
             list of samples
+        kwargs: dict
+            dictionary of kwargs
         """
+        self.check_kwargs(kwargs, self.required_kwargs[self.name])
+        self.assign_kwargs(self.required_kwargs[self.name], kwargs)
+
         new_samples = samples.copy()
 
         acc_rate = self.naccepted / self.iter

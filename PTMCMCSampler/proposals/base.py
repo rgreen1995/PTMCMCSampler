@@ -62,10 +62,10 @@ class JumpProposal(object):
     def __name__(self):
         return self.name
 
-    def __call__(self, func, samples):
+    def __call__(self, func, samples, kwargs):
         """
         """
-        new_samples = func(samples)
+        new_samples = func(samples, kwargs)
         return self.return_new_samples(new_samples)
 
     def check_kwargs(self, kwargs, keys):
