@@ -9,9 +9,9 @@ class Result(object):
     initial_samples: numpy.array
         array of samples that have not been burnt in
     """
-    def __init__(self, initial_samples, jump_proposal_name=None):
+    def __init__(self, initial_samples, burnin=0, jump_proposal_name=None):
         self.initial_samples = initial_samples
-        self.burnin = 0
+        self.burnin = burnin
         self.jump_proposal_name = jump_proposal_name
 
     def save(self, outfile=None, outdir="./"):
