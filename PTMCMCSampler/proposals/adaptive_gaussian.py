@@ -50,7 +50,7 @@ class SingleComponentAdaptiveGaussian(JumpProposal):
         else:
             sigma = current_sigma - scaled_samples
 
-        new_samples += np.random.normal(0, sigma)
+        new_samples[jumpind] += np.random.normal(0, sigma)
         return new_samples
 
 
