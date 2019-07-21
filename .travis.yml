@@ -1,0 +1,21 @@
+language: python
+
+python:
+  - '3.5'
+  - '3.6'
+  - '3.7'
+
+before_install:
+  - pip install pip setuptools --upgrade
+  - pip install -r requirements.txt
+  - pip install -r optional_requirements.txt
+  - pip install pytest, coverage
+
+install:
+  - python setup.py install
+
+script:
+  - coverage run -m pytest tests/
+
+after_success:
+  - coverage report
