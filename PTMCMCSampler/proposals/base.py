@@ -63,8 +63,6 @@ class JumpProposal(object):
         return self.name
 
     def __call__(self, func, samples, kwargs):
-        """
-        """
         new_samples = func(samples, kwargs)
         return self.return_new_samples(new_samples)
 
@@ -81,8 +79,9 @@ class JumpProposal(object):
         if kwargs == None and keys != []:
             raise ProposalError(
                 "The jump proposal %s requires you to pass the arguments %s. "
-                "Please pass the arguments with the `jump_proposal_arguments` "
-                "kwarg to the sampler object" % (self.name, " and ".join(keys)))
+                "Please pass the arguments with the "
+                "`initialize_jump_proposal_arguments` kwarg to the sampler "
+                "object" % (self.name, " and ".join(keys)))
 
         if not all(i in kwargs.keys() for i in keys):
             raise ProposalError(
