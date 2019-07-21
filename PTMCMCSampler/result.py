@@ -40,7 +40,7 @@ class Result(object):
         """
         return func(self.samples, **kwargs)
 
-    def set_burnin(self, burnin=None):
+    def set_burnin(self, burnin):
         """Set the burnin of the chain
 
         burnin: int
