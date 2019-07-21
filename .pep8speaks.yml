@@ -2,5 +2,6 @@ scanner:
   diff_only: True
 
 pycodestyle:
+  max-line-length: 100
   exclude:
     - docs/conf.py
