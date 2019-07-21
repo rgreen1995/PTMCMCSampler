@@ -51,7 +51,7 @@ class SingleComponentAdaptiveGaussian(JumpProposal):
             sigma = current_sigma - scaled_samples
 
         new_samples[jumpind] += np.random.normal(0, sigma)
-        return new_samples
+        return new_samples, 0.0
 
 
 class MultiComponentAdaptiveGaussian(JumpProposal):
@@ -103,7 +103,7 @@ class MultiComponentAdaptiveGaussian(JumpProposal):
             else:
                 sigma = current_sigma - scaled_samples
             new_samples[ind] += np.random.normal(0, abs(sigma))
-        return new_samples
+        return new_samples, 0.0
 
 
 class AdaptiveGaussian(JumpProposal):
@@ -151,4 +151,4 @@ class AdaptiveGaussian(JumpProposal):
             else:
                 sigma = current_sigma - scaled_samples
             new_samples[ind] += np.random.normal(0, sigma)
-        return new_samples
+        return new_samples, 0.0

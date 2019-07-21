@@ -32,4 +32,4 @@ class Uniform(JumpProposal):
             list of samples
         """
         new_samples = np.random.uniform(self.pmin, self.pmax, len(samples))
-        return new_samples
+        return new_samples, 0.0

@@ -55,7 +55,7 @@ class SingleComponentAdaptiveCovariance(JumpProposal):
             self.U[jumpind][:, ind].flatten()
         )
 
-        return new_samples
+        return new_samples, 0.0
 
 
 class AdaptiveCovariance(JumpProposal):
@@ -106,4 +106,4 @@ class AdaptiveCovariance(JumpProposal):
         y[ind] += np.random.randn(neff) * cd * np.sqrt(self.S[jumpind][ind])
         new_samples[self.groups[jumpind]] = np.dot(self.U[jumpind], y)
 
-        return new_samples
+        return new_samples, 0.0
