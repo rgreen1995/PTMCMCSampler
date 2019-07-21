@@ -50,8 +50,8 @@ class SingleComponentAdaptiveGaussian(JumpProposal):
         else:
             sigma = current_sigma - scaled_samples
 
-        new_samples += np.random.normal(0, sigma)
-        return new_samples
+        new_samples[jumpind] += np.random.normal(0, sigma)
+        return new_samples, 0.0
 
 
 class MultiComponentAdaptiveGaussian(JumpProposal):
@@ -69,9 +69,9 @@ class MultiComponentAdaptiveGaussian(JumpProposal):
         super(MultiComponentAdaptiveGaussian, self).__init__()
         self.name = "MultiComponentAdaptiveGaussian"
 
-    def __call__(self):
-        return super(MultiComponentAdpativeGaussian, self).__call__(
-            self.jump, self.samples, kwargs)
+    def __call__(self, samples, kwargs):
+        return super(MultiComponentAdaptiveGaussian, self).__call__(
+            self.jump, samples, kwargs)
 
     def jump(self, samples, kwargs):
         """Return the new samples assuming a Differential Evolution jump
@@ -103,7 +103,7 @@ class MultiComponentAdaptiveGaussian(JumpProposal):
             else:
                 sigma = current_sigma - scaled_samples
             new_samples[ind] += np.random.normal(0, abs(sigma))
-        return new_samples
+        return new_samples, 0.0
 
 
 class AdaptiveGaussian(JumpProposal):
@@ -150,5 +150,5 @@ class AdaptiveGaussian(JumpProposal):
                 sigma = current_sigma + scaled_samples
             else:
                 sigma = current_sigma - scaled_samples
-            new_samples += np.random.normal(0, sigma)
-        return new_samples
+            new_samples[ind] += np.random.normal(0, sigma)
+        return new_samples, 0.0

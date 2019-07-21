@@ -32,4 +32,4 @@ class Normal(JumpProposal):
             list of samples
         """
         new_samples = [np.random.normal(i, self.step_size) for i in samples]
-        return new_samples
+        return new_samples, 0.0

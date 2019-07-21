@@ -5,7 +5,7 @@ __all__ = [
     "SingleComponentAdaptiveCovariance", "AdaptiveCovariance",
     "SingleComponentAdaptiveGaussian", "MultiComponentAdaptiveGaussian",
     "AdaptiveGaussian", "DifferentialEvolution", "Normal", "Uniform",
-    "Prior"]
+    "MALA", "HMC", "Prior"]
 
 __default__ = [
     "SingleComponentAdaptiveCovariance", "AdaptiveCovariance",
@@ -56,6 +56,8 @@ class JumpProposal(object):
             "DifferentialEvolution": ["beta", "groups", "DEBuffer"],
             "Normal": ["step_size"],
             "Uniform": ["pmin", "pmax"],
+            "Gradient": ["loglik_grad", "logprior_grad", "mm_inv", "nburn"],
+            "HMC": ["step_size", "nminsteps", "nmaxsteps"],
             "Prior": []}
 
     @property
@@ -63,10 +65,8 @@ class JumpProposal(object):
         return self.name
 
     def __call__(self, func, samples, kwargs):
-        """
-        """
-        new_samples = func(samples, kwargs)
-        return self.return_new_samples(new_samples)
+        new_samples, forward_backward_prob = func(samples, kwargs)
+        return self.return_new_samples(new_samples, forward_backward_prob)
 
     def check_kwargs(self, kwargs, keys):
         """Check that the kwargs are correct for each jump proposal
@@ -81,8 +81,9 @@ class JumpProposal(object):
         if kwargs == None and keys != []:
             raise ProposalError(
                 "The jump proposal %s requires you to pass the arguments %s. "
-                "Please pass the arguments with the `jump_proposal_arguments` "
-                "kwarg to the sampler object" % (self.name, " and ".join(keys)))
+                "Please pass the arguments with the "
+                "`initialize_jump_proposal_arguments` kwarg to the sampler "
+                "object" % (self.name, " and ".join(keys)))
 
         if not all(i in kwargs.keys() for i in keys):
             raise ProposalError(
@@ -102,7 +103,7 @@ class JumpProposal(object):
         for i in keys:
             setattr(self, i, kwargs[i])
 
-    def return_new_samples(self, samples):
+    def return_new_samples(self, samples, forward_backward_prob):
         """Return the new samples
 
         Parameters
@@ -112,4 +113,4 @@ class JumpProposal(object):
         """
         if self.iter:
             self.iter += 1
-        return samples, 0.0
+        return samples, forward_backward_prob
