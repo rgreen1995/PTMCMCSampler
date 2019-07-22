@@ -13,12 +13,14 @@ class Result(object):
                  initial_likelihood_vals=None,
                  initial_prior_vals=None,
                  burnin=0,
+                 num_chains=2,
                  jump_proposal_name=None):
         self.initial_samples = initial_samples
         self.inital_likelihood_vals = initial_likelihood_vals
         self.initial_prior_vals = initial_prior_vals
         self.burnin = burnin
         self.jump_proposal_name = jump_proposal_name
+        self.num_chains = num_chains
 
     def save(self, outfile=None, outdir="./"):
         """Save the samples to file
@@ -63,19 +65,25 @@ class Result(object):
     def samples(self):
         """Return the samples
         """
-        return self.initial_samples[self.burnin:]
+        if self.num_chains ==1 :
+            np.expand_dims(self.initial_samples, axis =0)
+        return self.initial_samples[:,self.burnin:]
 
     @property
     def likelihood_values(self):
         """Return the likelihood values for each sample
         """
-        return self.inital_likelihood_vals[self.burnin:]
+        if self.num_chains ==1 :
+            np.expand_dims(self.initial_likelihood_vals, axis =0)
+        return self.inital_likelihood_vals[:,self.burnin:]
 
     @property
     def prior_values(self):
         """Return the prior values for each sample
         """
-        return self.initial_prior_vals[self.burnin:]
+        if self.num_chains ==1 :
+            np.expand_dims(self.initial_prior_vals, axis =0)
+        return self.initial_prior_vals[:,self.burnin:]
 
     def plot_chains(self):
         """Generate a plot of the chains
