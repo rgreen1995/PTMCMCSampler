@@ -34,7 +34,7 @@ $ cd PTMCMCSampler
 $ git remote add upstream https://git.ligo.org/lscsoft/PTMCMCSampler
 ```
 
-2. Fetch new changes from the `lscsoft` repo,
+2. Fetch new changes from the `rgreen1995` repo,
 
 ```bash
 $ git fetch upstream
