@@ -12,20 +12,20 @@ class BaseResult(object):
         """Test that the samples property returns what it should
         """
         result_values = self.result.samples.all()
-        assert result_values == self.initial_samples[:, self.burnin :].all()
+        assert result_values == self.initial_samples[:, self.burnin:].all()
 
     def test_likelihood_value(self):
         """Test that the likelihood property returns what it should
         """
         result_values = self.result.likelihood_values.all()
-        true_values = self.initial_likelihood_vals[:, self.burnin :].all()
+        true_values = self.initial_likelihood_vals[:, self.burnin:].all()
         assert result_values == true_values
 
     def test_prior_value(self):
         """Test that the likelihood property returns what it should
         """
         result_values = self.result.prior_values.all()
-        assert result_values == self.initial_prior_vals[:, self.burnin :].all()
+        assert result_values == self.initial_prior_vals[:, self.burnin:].all()
 
     def test_set_burnin(self):
         """Test the function `set_burnin`
