@@ -2,6 +2,7 @@ import pytest
 import numpy as np
 import matplotlib
 import corner
+import os
 from PTMCMCSampler.result import Result
 
 
@@ -40,6 +41,12 @@ class BaseResult(object):
         self.result.set_burnin(self.burnin)
         assert self.result.burnin == self.burnin
 
+    def test_save(self):
+        """Test the function `save`
+        """
+        self.result.save(outfile="test.txt")
+        assert os.path.isfile("test.txt")
+
     def test_plot_chains(self):
         """Test the function `plot_chains`
         """
@@ -73,10 +80,20 @@ class TestResult1d(BaseResult):
             num_chains=self.n_cold_chains
             )
 
+    def teardown(self):
+        """
+        """
+        os.remove("test.txt")
+
     def test_set_burnin(self):
         """Test the function `set_burnin`
         """
         super(TestResult1d, self).test_set_burnin()
+
+    def test_save(self):
+        """Test the function `save`
+        """
+        super(TestResult1d, self).test_save()
 
     def test_samples(self):
         """Test that the samples property returns what it should
@@ -126,10 +143,20 @@ class TestResult2d(BaseResult):
             num_chains=self.n_cold_chains
             )
 
+    def teardown(self):
+        """
+        """
+        os.remove("test.txt")
+
     def test_set_burnin(self):
         """Test the function `set_burnin`
         """
         super(TestResult2d, self).test_set_burnin()
+
+    def test_save(self):
+        """Test the function `save`
+        """
+        super(TestResult2d, self).test_save()
 
     def test_samples(self):
         """Test that the samples property returns what it should
