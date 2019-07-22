@@ -147,7 +147,8 @@ class PTSampler(object):
             return getattr(prop, key)
         raise AttributeError(
             "%s not recognised as a valid jump proposal. The list of available"
-            "jump proposals are:\n\n%s" % (key, "\n".join(prop.__all__)))
+            "jump proposals are:\n\n%s" % (key, "\n".join(prop.__all__))
+        )
 
     @staticmethod
     def default_weights():
@@ -173,7 +174,8 @@ class PTSampler(object):
         if list(weights.keys()) == ["DifferentialEvolution"]:
             raise Exception(
                 "The 'DifferentialEvolution' jump proposal can only be used "
-                "after burnin. Please provide an additional jump proposal")
+                "after burnin. Please provide an additional jump proposal"
+            )
 
         for key in weights.keys():
             name = self.get_proposal_object_from_name(key)
@@ -204,8 +206,9 @@ class PTSampler(object):
         neff=100000,
         write_cold_chains=False,
         writeHotChains=False,
-        save_jump_stats = False,
+        save_jump_stats=False,
         hotChain=False,
+        n_cold_chains=2,
     ):
         """
         Initialize MCMC quantities
@@ -231,14 +234,15 @@ class PTSampler(object):
         self.neff = neff
         self.tstart = 0
         self.iter = i0
-        self.write_cold_chains= write_cold_chains
+        self.write_cold_chains = write_cold_chains
         self.save_jump_stats = save_jump_stats
+        self.n_cold_chains = n_cold_chains
 
         N = int(maxIter / thin)
 
-        self._lnprob = np.zeros(N)
-        self._lnlike = np.zeros(N)
-        self._chain = np.zeros((N, self.ndim))
+        self._lnprob = np.zeros((self.n_cold_chains, N))
+        self._lnlike = np.zeros((self.n_cold_chains, N))
+        self._chain = np.zeros((self.n_cold_chains, N, self.ndim))
         self.naccepted = 0
         self.swapProposed = 0
         self.nswap_accepted = 0
@@ -246,18 +250,21 @@ class PTSampler(object):
         # set up covariance matrix and DE buffers
         # TODO: better way of allocating this to save memory
         if self.MPIrank == 0:
-            self._AMbuffer = np.zeros((self.Niter, self.ndim))
-            self._DEbuffer = np.zeros((self.burn, self.ndim))
+            self._AMbuffer = np.zeros((self.n_cold_chains, self.Niter + 1, self.ndim))
+            self._DEbuffer = np.zeros((self.n_cold_chains, self.burn + 1, self.ndim))
 
         if self.logl_grad is not None and self.logp_grad is not None:
             self.initialize_jump_proposal_kwargs["MALA"] = {
                 "loglik_grad": self.logl_grad,
                 "logprior_grad": self.logp_grad,
                 "mm_inv": self.cov,
-                "nburn": self.burn}
+                "nburn": self.burn,
+            }
 
             if "HMC" not in list(self.initialize_jump_proposal_kwargs.keys()):
-                self.initialize_jump_proposal_kwargs["HMC"] = self.initialize_jump_proposal_kwargs["MALA"]
+                self.initialize_jump_proposal_kwargs[
+                    "HMC"
+                ] = self.initialize_jump_proposal_kwargs["MALA"]
             else:
                 for key in self.initialize_jump_proposal_kwargs["MALA"]:
                     value = self.initialize_jump_proposal_kwargs["MALA"][key]
@@ -322,24 +329,25 @@ class PTSampler(object):
             self._chainfile = open(self.fname, "w")
             self._chainfile.close()
 
-    def updateChains(self, p0, lnlike0, lnprob0, iter):
+    def updateChains(self, p0, lnlike0, lnprob0, iter, chain_ind):
         """
         Update chains after jump proposals
 
         """
         # update buffer
         if self.MPIrank == 0:
-            self._AMbuffer[iter, :] = p0
+            # sHACK
+            self._AMbuffer[chain_ind, iter, :] = p0
 
         # put results into arrays
         if iter % self.thin == 0:
             ind = int(iter / self.thin)
-            self._chain[ind, :] = p0
-            self._lnlike[ind] = lnlike0
-            self._lnprob[ind] = lnprob0
+            self._chain[chain_ind, ind, :] = p0
+            self._lnlike[chain_ind, ind] = lnlike0
+            self._lnprob[chain_ind, ind] = lnprob0
 
         # write to file
-        if self.write_cold_chains :
+        if self.write_cold_chains:
             if iter % self.isave == 0 and iter > 1 and iter > self.resumeLength:
                 if self.writeHotChains or self.MPIrank == 0:
                     self._writeToFile(iter)
@@ -375,11 +383,11 @@ class PTSampler(object):
         thin=1,
         i0=0,
         neff=100000,
-        write_cold_chains= False,
+        write_cold_chains=False,
         writeHotChains=False,
-        save_jump_stats = False,
+        save_jump_stats=False,
         hotChain=False,
-        n_cold_chains = 2,
+        n_cold_chains=2,
     ):
         """
         Function to carry out PTMCMC sampling.
@@ -436,8 +444,9 @@ class PTSampler(object):
                 i0=i0,
                 neff=neff,
                 writeHotChains=writeHotChains,
-                write_cold_chains= write_cold_chains,
+                write_cold_chains=write_cold_chains,
                 hotChain=hotChain,
+                n_cold_chains=n_cold_chains,
             )
 
         self.jump_proposal_kwargs = {}
@@ -467,55 +476,63 @@ class PTSampler(object):
                 lnprob0 = 1 / self.temp * lnlike0 + lp
 
         # record first values
-        self.updateChains(p0, lnlike0, lnprob0, i0)
+        self.updateChains(p0, lnlike0, lnprob0, i0, 0)
 
         self.comm.barrier()
 
         # start iterations
-        iter = i0
+
         self.tstart = time.time()
         runComplete = False
         Neff = 0
-        for j in range(Niter - 1):
-            iter += 1
-            accepted = 0
+        for i in range(n_cold_chains):
+            print("chain %s" % i)
+            iter = i0
+            for j in range(Niter - 1):
+                iter += 1
+                accepted = 0
 
-            # call PTMCMCOneStep
-            p0, lnlike0, lnprob0 = self.PTMCMCOneStep(p0, lnlike0, lnprob0,
-                                                      iter)
+                # call PTMCMCOneStep
+                p0, lnlike0, lnprob0 = self.PTMCMCOneStep(p0, lnlike0, lnprob0, iter, i)
 
-            # compute effective number of samples
-            if iter % 1000 == 0 and iter > 2 * self.burn and self.MPIrank == 0:
-                try:
-                    ### this will calculate the number of effective
-                    ### samples for each chain
-                    samples = np.expand_dims(self._chain[: iter -1], axis =0)
-                    arviz_samples = az.convert_to_inference_data(samples)
-                    Neff = int(np.min(az.ess(arviz_samples).to_array().values))
-                    print("\n {0} total samples".format(iter))
-                    print("\n {0} effective samples".format(Neff))
+                # compute effective number of samples
+                if iter % 10000 == 0 and iter > 2 * self.burn and self.MPIrank == 0:
+                    try:
+                        ### this will calculate the number of effective
+                        ### samples for each chain
+                        samples = np.expand_dims(self._chain[i, : iter - 1], axis=0)
+                        arviz_samples = az.convert_to_inference_data(samples)
+                        Neff = int(np.min(az.ess(arviz_samples).to_array().values))
+                        print("\n {0} total samples".format(iter))
+                        print("\n {0} effective samples".format(Neff))
 
-                except NameError:
-                    Neff = 0
-                    pass
+                    except NameError:
+                        Neff = 0
+                        pass
 
-            # stop if reached effective number of samples
-            if self.MPIrank == 0 and int(Neff) > self.neff:
-                if self.verbose:
-                    print("\nRun Complete with {0} effective samples".format(int(Neff)))
-                break
+                # stop if reached effective number of samples
+                if self.MPIrank == 0 and int(Neff) > self.neff:
+                    if self.verbose:
+                        print(
+                            "\nRun Complete with {0} effective samples".format(
+                                int(Neff)
+                            )
+                        )
+                    break
 
-            if self.MPIrank == 0 and runComplete:
-                for jj in range(1, self.nchain):
-                    self.comm.send(runComplete, dest=jj, tag=55)
+                if self.MPIrank == 0 and runComplete:
+                    for jj in range(1, self.nchain):
+                        self.comm.send(runComplete, dest=jj, tag=55)
 
-            # check for other chains
-            if self.MPIrank > 0:
-                runComplete = self.comm.Iprobe(source=0, tag=55)
-                time.sleep(0.000001)  # trick to get around
-        return Result(self._chain, self._lnlike, self._lnprob, self.burn )
+                # check for other chains
+                if self.MPIrank > 0:
+                    runComplete = self.comm.Iprobe(source=0, tag=55)
+                    time.sleep(0.000001)  # trick to get around
+        return Result(
+            self._chain, self._lnlike, self._lnprob, self.burn, self.n_cold_chains
+        )
 
-    def PTMCMCOneStep(self, p0, lnlike0, lnprob0, iter):
+    def PTMCMCOneStep(self, p0, lnlike0, lnprob0, iter, chain_ind):
         """
         Function to carry out PTMCMC sampling.
 
@@ -531,7 +548,7 @@ class PTSampler(object):
         """
         # update covariance matrix
         if (iter - 1) % self.covUpdate == 0 and (iter - 1) != 0 and self.MPIrank == 0:
-            self._updateRecursive(iter - 1, self.covUpdate)
+            self._updateRecursive(iter - 1, self.covUpdate, chain_ind)
 
             # broadcast to other chains
             [
@@ -555,7 +572,7 @@ class PTSampler(object):
 
         # update DE buffer
         if (iter - 1) % self.burn == 0 and (iter - 1) != 0 and self.MPIrank == 0:
-            self._updateDEbuffer(iter - 1, self.burn)
+            self._updateDEbuffer(iter - 1, self.burn, chain_ind)
 
             # broadcast to other chains
             [
@@ -567,24 +584,40 @@ class PTSampler(object):
         getDEbuf = self.comm.Iprobe(source=0, tag=222)
         time.sleep(0.000001)
 
-        if getDEbuf and self.MPIrank > 0 and "DifferentialEvolution" in list(self.weights.keys()):
+        if (
+            getDEbuf
+            and self.MPIrank > 0
+            and "DifferentialEvolution" in list(self.weights.keys())
+        ):
             name = self.get_proposal_object_from_name("DifferentialEvolution")
             self._DEbuffer = self.comm.recv(source=0, tag=222)
 
             # randomize cycle
             if prop.DEJump not in self.propCycle:
-                self.addProposalToCycle(name(kwargs=None), self.weights["DifferentialEvolution"])
+                self.addProposalToCycle(
+                    name(kwargs=None), self.weights["DifferentialEvolution"]
+                )
                 self.randomizeProposalCycle()
 
             # reset
             getDEbuf = 0
 
         # after burn in, add DE jumps
-        if (iter - 1) == self.burn and self.MPIrank == 0 and "DifferentialEvolution" in list(self.weights.keys()):
+        if (
+            (iter - 1) == self.burn
+            and self.MPIrank == 0
+            and "DifferentialEvolution" in list(self.weights.keys())
+        ):
             name = self.get_proposal_object_from_name("DifferentialEvolution")
             if self.verbose:
-                print("Adding DE jump with weight {0}".format(self.weights["DifferentialEvolution"]))
-            self.addProposalToCycle(name(kwargs=None), self.weights["DifferentialEvolution"])
+                print(
+                    "Adding DE jump with weight {0}".format(
+                        self.weights["DifferentialEvolution"]
+                    )
+                )
+            self.addProposalToCycle(
+                name(kwargs=None), self.weights["DifferentialEvolution"]
+            )
 
             # randomize cycle
             self.randomizeProposalCycle()
@@ -639,7 +672,7 @@ class PTSampler(object):
             if swapReturn == 2:
                 self.nswap_accepted += 1
 
-        self.updateChains(p0, lnlike0, lnprob0, iter)
+        self.updateChains(p0, lnlike0, lnprob0, iter, chain_ind)
 
         return p0, lnlike0, lnprob0
 
@@ -808,7 +841,6 @@ class PTSampler(object):
             )
         self._chainfile.close()
 
-
         #### write jump statistics files ####
 
         # only for T=1 chain
@@ -835,7 +867,7 @@ class PTSampler(object):
                 fout.close()
 
     # function to update covariance matrix for jump proposals
-    def _updateRecursive(self, iter, mem):
+    def _updateRecursive(self, iter, mem, chain_ind):
         """
         Function to recursively update sample covariance matrix.
 
@@ -856,10 +888,12 @@ class PTSampler(object):
             it += 1
             for jj in range(ndim):
 
-                diff[jj] = self._AMbuffer[iter - mem + ii, jj] - self.mu[jj]
+                diff[jj] = self._AMbuffer[chain_ind, iter - mem + ii, jj] - self.mu[jj]
                 self.mu[jj] += diff[jj] / it
 
-            self.M2 += np.outer(diff, (self._AMbuffer[iter - mem + ii, :] - self.mu))
+            self.M2 += np.outer(
+                diff, (self._AMbuffer[chain_ind, iter - mem + ii, :] - self.mu)
+            )
 
         self.cov[:, :] = self.M2 / (it - 1)
 
@@ -873,7 +907,7 @@ class PTSampler(object):
             self.U[ct], self.S[ct], v = np.linalg.svd(covgroup)
 
     # update DE buffer samples
-    def _updateDEbuffer(self, iter, burn):
+    def _updateDEbuffer(self, iter, burn, chain_ind):
         """
         Update Differential Evolution with last burn
         values in the total chain
@@ -883,7 +917,7 @@ class PTSampler(object):
 
         """
 
-        self._DEbuffer = self._AMbuffer[iter - burn : iter]
+        self._DEbuffer = self._AMbuffer[chain_ind, iter - burn : iter]
 
     # add jump proposal distribution functions
     def addProposalToCycle(self, func, weight):
@@ -957,7 +991,8 @@ class PTSampler(object):
             "S": self.S,
             "naccepted": self.naccepted,
             "chain": self._chain,
-            "DEBuffer": self._DEbuffer}
+            "DEBuffer": self._DEbuffer,
+        }
 
     # call proposal functions from cycle
     def _jump(self, x, iter):
@@ -972,9 +1007,7 @@ class PTSampler(object):
         # call function
         ind = np.random.randint(0, length)
 
-
         self.update_jump_proposal_kwargs(iter)
-
 
         q, qxy = self.propCycle[ind](x, self.jump_proposal_kwargs)
 
