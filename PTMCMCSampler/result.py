@@ -9,8 +9,14 @@ class Result(object):
     initial_samples: numpy.array
         array of samples that have not been burnt in
     """
-    def __init__(self, initial_samples, burnin=0, jump_proposal_name=None):
+    def __init__(self, initial_samples,
+                 initial_likelihood_vals=None,
+                 initial_prior_vals=None,
+                 burnin=0,
+                 jump_proposal_name=None):
         self.initial_samples = initial_samples
+        self.inital_likelihood_vals = initial_likelihood_vals
+        self.initial_prior_vals = initial_prior_vals
         self.burnin = burnin
         self.jump_proposal_name = jump_proposal_name
 
@@ -58,6 +64,18 @@ class Result(object):
         """Return the samples
         """
         return self.initial_samples[self.burnin:]
+
+    @property
+    def likelihood_values(self):
+        """Return the likelihood values for each sample
+        """
+        return self.inital_likelihood_vals[self.burnin:]
+
+    @property
+    def prior_values(self):
+        """Return the prior values for each sample
+        """
+        return self.initial_prior_vals[self.burnin:]
 
     def plot_chains(self):
         """Generate a plot of the chains
