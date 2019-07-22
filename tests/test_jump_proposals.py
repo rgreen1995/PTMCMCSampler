@@ -28,8 +28,13 @@ class Base(object):
         if self.kwargs and "U" in list(self.kwargs.keys()):
             self.kwargs["U"] = [np.array([[1.]])]
             self.kwargs["S"] = [np.array([0.01])]
+        if self.kwargs and "mm_inv" in list(self.kwargs.keys()):
+            self.kwargs["mm_inv"] = np.eye(1) * 0.1**2
         self.samples = np.array([10.])
-        new_samples, prob = self.class_object(self.samples, kwargs=self.kwargs)
+        if hasattr(self, "class_object1d"):
+            new_samples, prob = self.class_object1d(self.samples, kwargs=self.kwargs)
+        else:
+            new_samples, prob = self.class_object(self.samples, kwargs=self.kwargs)
         assert len(new_samples) == len(self.samples)
         for i in new_samples:
             assert isinstance(i, float)
@@ -38,7 +43,10 @@ class Base(object):
         """Test the __call__ method for ndim = 2
         """
         self.samples = np.array([10., 12.])
-        new_samples, prob = self.class_object(self.samples, kwargs=self.kwargs)
+        if hasattr(self, "class_object2d"):
+            new_samples, prob = self.class_object2d(self.samples, kwargs=self.kwargs)
+        else:
+            new_samples, prob = self.class_object(self.samples, kwargs=self.kwargs)
         assert len(new_samples) == len(self.samples)
         for i in new_samples:
             assert isinstance(i, float)
@@ -74,6 +82,59 @@ class BaseAdaptiveCovariance(Base):
             "beta": self.beta,
             "U": self.U,
             "S": self.S}
+
+
+class BaseGradientClass(Base):
+    """Class to setup variables for all Gradient jump proposals
+    """
+    def Gradient_variables(self):
+        """Setup the variables for all Gradient classes
+        """
+        self.loglik_grad = self.loglik_grad_func
+        self.logprior_grad = self.logprior_grad_func
+        self.mm_inv = np.eye(2) * 0.1**2
+        self.nburn = 500
+        self.kwargs = {
+            "loglik_grad": self.loglik_grad,
+            "logprior_grad": self.logprior_grad,
+            "mm_inv": self.mm_inv,
+            "nburn": self.nburn}
+
+    def loglik_grad_func(self, x):
+        """Basic log likelihood function
+        """
+        ll = -0.5*np.sum(x**2)-len(x)*0.5*np.log(2*np.pi)
+        ll_grad = -x
+        return ll, ll_grad
+
+    def logprior_grad_func(self, x):
+        """Basic log prior function
+        """
+        if np.all(0. <= x) and np.all(10. >= x):
+            z = 0.0
+        else:
+            z = -np.inf
+        return z, np.zeros_like(x)
+
+
+class TestMALA(BaseGradientClass):
+    """Test the MALA jump proposal
+    """
+    def setup(self):
+        """Setup the MALA class
+        """
+        self.Gradient_variables()
+        self.class_object2d = super(
+            TestMALA, self).setup("MALA", self.kwargs)
+        self.kwargs["mm_inv"] = np.eye(1) * 0.1**2
+        self.class_object1d = super(
+            TestMALA, self).setup("MALA", self.kwargs)
+
+    def test_call(self):
+        """Test the __call__ method for the MALA class
+        """
+        super(TestMALA, self).test_1d_case()
+        super(TestMALA, self).test_2d_case()
 
 
 class TestDifferentialEvolution(Base):
