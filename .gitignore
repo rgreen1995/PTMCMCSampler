@@ -6,3 +6,4 @@ dist
 *.h5
 *.egg*
 *.ipynb
+.coverage
