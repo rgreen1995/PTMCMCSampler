@@ -36,6 +36,11 @@ class Base(object):
             assert isinstance(i, float)
 
 
+class TestAdaptiveGaussian(Base):
+    """Test the Adaptive Gaussian jump proposal
+    """
+
+
 class TestNormal(Base):
     """Test the Normal jump proposal
     """
