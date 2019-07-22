@@ -130,6 +130,13 @@ class TestMALA(BaseGradientClass):
         self.class_object1d = super(
             TestMALA, self).setup("MALA", self.kwargs)
 
+    def test_no_kwargs(self):
+        """Test to make sure that an Exception is raised when you fail to pass
+        the kwargs to initalize the class
+        """
+        with pytest.raises(Exception) as info:
+            class_object = super(TestMALA, self).setup("MALA", {})
+
     def test_call(self):
         """Test the __call__ method for the MALA class
         """
@@ -208,6 +215,25 @@ class TestSingleComponentAdaptiveCovariance(BaseAdaptiveCovariance):
         """
         super(TestSingleComponentAdaptiveCovariance, self).test_1d_case()
         super(TestSingleComponentAdaptiveCovariance, self).test_2d_case()
+
+
+class TestAdaptiveCovariance(BaseAdaptiveCovariance):
+    """Test the Adaptive Covariance jump proposal
+    """
+    def setup(self):
+        """Setup the AdaptiveCovariance class
+        """
+        self.class_object = super(
+            TestAdaptiveCovariance, self).setup(
+            "AdaptiveCovariance", {})
+        self.AdaptiveCovariance_variables()
+
+    def test_call(self):
+        """Test the __call_ method for the AdaptiveCovariance
+        class
+        """
+        super(TestAdaptiveCovariance, self).test_1d_case()
+        super(TestAdaptiveCovariance, self).test_2d_case()
 
 
 class TestSingleComponentAdaptiveGaussian(BaseAdaptiveGaussian):
