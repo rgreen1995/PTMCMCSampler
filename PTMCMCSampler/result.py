@@ -96,11 +96,11 @@ class Result(object):
     def plot_chains(self):
         """Generate a plot of the chains
         """
-        fig = self._plot(plots.chains_plot)
+        fig = self._plot(plots.chains_plot, num_chains=self.num_chains)
         return fig
 
     def plot_corner(self, truths=None):
         """Generate a corner plot of the samples
         """
-        fig = self._plot(plots.corner_plot, truths=truths)
+        fig = self._plot(plots.corner_plot, num_chains=self.num_chains, truths=truths)
         return fig

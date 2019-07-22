@@ -4,6 +4,13 @@ import numpy as np
 from PTMCMCSampler import plots
 
 
+def test_get_colors():
+    """Test the `get_colors` function
+    """
+    n = 10
+    colors = plots.get_colors(n)
+    assert len(colors) == n
+
 def test_chain_plots():
     """Test that we can produce a chain plot
     """
