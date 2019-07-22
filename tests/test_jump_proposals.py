@@ -137,6 +137,36 @@ class TestMALA(BaseGradientClass):
         super(TestMALA, self).test_2d_case()
 
 
+class TestHMC(BaseGradientClass):
+    """Test the HMC jump proposal
+    """
+    def setup(self):
+        """Setup the HMC class
+        """
+        self.Gradient_variables()
+        self.kwargs["step_size"] = 0.01
+        self.kwargs["nminsteps"] = 0
+        self.kwargs["nmaxsteps"] = 300
+        self.class_object2d = super(
+            TestHMC, self).setup("HMC", self.kwargs)
+        self.kwargs["mm_inv"] = np.eye(1) * 0.1**2
+        self.class_object1d = super(
+            TestHMC, self).setup("HMC", self.kwargs)
+
+    def test_no_kwargs(self):
+        """Test to make sure that an Exception is raised when you fail to pass
+        the kwargs to initalize the class
+        """
+        with pytest.raises(Exception) as info:
+            class_object = super(TestHMC, self).setup("HMC", {})
+
+    def test_call(self):
+        """Test the __call__ method for the HMC class
+        """
+        super(TestHMC, self).test_1d_case()
+        super(TestHMC, self).test_2d_case()
+
+
 class TestDifferentialEvolution(Base):
     """Test the Differential Evolution jump proposal
     """
