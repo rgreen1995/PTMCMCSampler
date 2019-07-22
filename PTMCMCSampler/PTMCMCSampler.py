@@ -19,9 +19,9 @@ except ImportError:
     from . import nompi4py as MPI
 
 try:
-    from emcee import autocorr
+    import arviz as az
 except ImportError:
-    print("Do not have emcee package")
+    print("Do not have arviz package")
     pass
 
 
@@ -379,6 +379,7 @@ class PTSampler(object):
         writeHotChains=False,
         save_jump_stats = False,
         hotChain=False,
+        n_cold_chains = 2,
     ):
         """
         Function to carry out PTMCMC sampling.
@@ -475,45 +476,36 @@ class PTSampler(object):
         self.tstart = time.time()
         runComplete = False
         Neff = 0
-        while runComplete is False:
+        for j in range(Niter - 1):
             iter += 1
             accepted = 0
 
             # call PTMCMCOneStep
-            p0, lnlike0, lnprob0 = self.PTMCMCOneStep(p0, lnlike0, lnprob0, iter)
+            p0, lnlike0, lnprob0 = self.PTMCMCOneStep(p0, lnlike0, lnprob0,
+                                                      iter)
 
             # compute effective number of samples
-            if iter % 100000 == 0 and iter > 2 * self.burn and self.MPIrank == 0:
+            if iter % 1000 == 0 and iter > 2 * self.burn and self.MPIrank == 0:
                 try:
-                    ### Potentially change this to arviz ess?
-                    Neff = iter / max(
-                        1,
-                        np.nanmax(
-                            [
-                                autocorr.integrated_time(
-                                    self._AMbuffer[self.burn : (iter - 1), ii]
-                                )
-                                for ii in range(self.ndim)
-                            ]
-                        ),
-                    )
+                    ### this will calculate the number of effective
+                    ### samples for each chain
+                    samples = np.expand_dims(self._chain[: iter -1], axis =0)
+                    print(samples.shape)
+                    arviz_samples = az.convert_to_inference_data(samples)
+                    print(az.ess(arviz_samples))
+                    Neff = int(np.min(az.ess(arviz_samples).to_array().values))
                     print("\n {0} total samples".format(iter))
                     print("\n {0} effective samples".format(Neff))
+
                 except NameError:
                     Neff = 0
                     pass
-
-            # stop if reached maximum number of iterations
-            if self.MPIrank == 0 and iter >= self.Niter - 1:
-                if self.verbose:
-                    print("\nRun Complete")
-                runComplete = True
 
             # stop if reached effective number of samples
             if self.MPIrank == 0 and int(Neff) > self.neff:
                 if self.verbose:
                     print("\nRun Complete with {0} effective samples".format(int(Neff)))
-                runComplete = True
+                break
 
             if self.MPIrank == 0 and runComplete:
                 for jj in range(1, self.nchain):
