@@ -20,7 +20,11 @@ class Base(object):
     def test_1d_case(self):
         """Test the __call__ method for ndim = 1
         """
-        self.samples = [10.]
+        if self.kwargs and "groups" in list(self.kwargs.keys()):
+            self.kwargs["groups"] = [np.array([0])]
+            self.kwargs["U"] = [np.array([[1.]])]
+            self.kwargs["S"] = [np.array([0.01])]
+        self.samples = np.array([10.])
         new_samples, prob = self.class_object(self.samples, kwargs=self.kwargs)
         assert len(new_samples) == len(self.samples)
         for i in new_samples:
@@ -29,7 +33,7 @@ class Base(object):
     def test_2d_case(self):
         """Test the __call__ method for ndim = 2
         """
-        self.samples = [10., 12.]
+        self.samples = np.array([10., 12.])
         new_samples, prob = self.class_object(self.samples, kwargs=self.kwargs)
         assert len(new_samples) == len(self.samples)
         for i in new_samples:
@@ -37,14 +41,54 @@ class Base(object):
 
 
 class BaseAdaptiveGaussian(Base):
-    """Test the Adaptive Gaussian jump proposal
+    """Class to setup variables for all Adaptive Gaussian jump proposals
     """
     def AdaptiveGaussian_variables(self):
-        """Setup for all Adaptive Gaussian classes
+        """Setup the variables for all adaptive Gaussian classes
         """
         self.naccepted = 100
         self.iter = 1
         self.chain = np.array([[1., 2.], [3., 4.]])
+        self.kwargs = {
+            "naccepted": self.naccepted,
+            "iter": self.iter,
+            "chain": self.chain}
+
+
+class BaseAdaptiveCovariance(Base):
+    """Class to setup variables for all Adaptive Covariance jump proposals
+    """
+    def AdaptiveCovariance_variables(self):
+        """Setup the variables for all adaptive covariance classes
+        """
+        self.groups = [np.array([0, 1])]
+        self.beta = 1.0
+        self.U = [np.array([[1., 0.], [0., 1.]])]
+        self.S = [np.array([0.01, 0.01])]
+        self.kwargs = {
+            "groups": self.groups,
+            "beta": self.beta,
+            "U": self.U,
+            "S": self.S}
+
+
+class TestSingleComponentAdaptiveCovariance(BaseAdaptiveCovariance):
+    """Test the Single Component Adaptive Covariance jump proposal
+    """
+    def setup(self):
+        """Setup the SingleComponentAdaptiveCovariance class
+        """
+        self.class_object = super(
+            TestSingleComponentAdaptiveCovariance, self).setup(
+            "SingleComponentAdaptiveCovariance", {})
+        self.AdaptiveCovariance_variables()
+
+    def test_call(self):
+        """Test the __call_ method for the SingleComponentAdaptiveCovariance
+        class
+        """
+        super(TestSingleComponentAdaptiveCovariance, self).test_1d_case()
+        super(TestSingleComponentAdaptiveCovariance, self).test_2d_case()
 
 
 class TestSingleComponentAdaptiveGaussian(BaseAdaptiveGaussian):
@@ -57,10 +101,6 @@ class TestSingleComponentAdaptiveGaussian(BaseAdaptiveGaussian):
             TestSingleComponentAdaptiveGaussian, self).setup(
             "SingleComponentAdaptiveGaussian", {})
         self.AdaptiveGaussian_variables()
-        self.kwargs = {
-            "naccepted": self.naccepted,
-            "iter": self.iter,
-            "chain": self.chain}
 
     def test_call(self):
         """Test the __call__ method for the SingleComponentAdaptiveGaussian
@@ -80,10 +120,6 @@ class TestMultiComponentAdaptiveGaussian(BaseAdaptiveGaussian):
             TestMultiComponentAdaptiveGaussian, self).setup(
             "MultiComponentAdaptiveGaussian", {})
         self.AdaptiveGaussian_variables()
-        self.kwargs = {
-            "naccepted": self.naccepted,
-            "iter": self.iter,
-            "chain": self.chain}
 
     def test_call(self):
         """Test the __call__ method for the MultiComponentAdaptiveGaussian
@@ -103,10 +139,6 @@ class TestAdaptiveGaussian(BaseAdaptiveGaussian):
             TestAdaptiveGaussian, self).setup(
             "AdaptiveGaussian", {})
         self.AdaptiveGaussian_variables()
-        self.kwargs = {
-            "naccepted": self.naccepted,
-            "iter": self.iter,
-            "chain": self.chain}
 
     def test_call(self):
         """Test the __call__ method for the AdaptiveGaussian class
