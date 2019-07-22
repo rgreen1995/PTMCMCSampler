@@ -45,7 +45,9 @@ class BaseResult(object):
         """Test the function `save`
         """
         self.result.save(outfile="test.txt")
-        assert os.path.isfile("test.txt")
+        assert os.path.isfile("test_chain0.txt")
+        if self.result.num_chains == 2:
+            assert os.path.isfile("test_chain1.txt")
 
     def test_plot_chains(self):
         """Test the function `plot_chains`
@@ -83,7 +85,8 @@ class TestResult1d(BaseResult):
     def teardown(self):
         """
         """
-        os.remove("test.txt")
+        if os.path.isfile("test_chain0.txt"):
+            os.remove("test_chain0.txt")
 
     def test_set_burnin(self):
         """Test the function `set_burnin`
@@ -146,7 +149,11 @@ class TestResult2d(BaseResult):
     def teardown(self):
         """
         """
-        os.remove("test.txt")
+        if os.path.isfile("test_chain0.txt"):
+            os.remove("test_chain0.txt")
+        if os.path.isfile("test_chain1.txt"):
+            os.remove("test_chain1.txt")
+
 
     def test_set_burnin(self):
         """Test the function `set_burnin`

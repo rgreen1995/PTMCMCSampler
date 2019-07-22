@@ -38,10 +38,13 @@ class Result(object):
             The path to the directory to store the samples. Default = './'
         """
         if outfile is None and self.jump_proposal_name is None:
-            outfile = "%s/chains.txt" % (outdir)
+            outfile = "%s/chains" % (outdir)
         elif outfile is None:
-            outfile = "%s/%s_chains.txt" % (outdir, self.jump_proposal_name)
-        np.savetxt(outfile, self.initial_samples)
+            outfile = "%s/%s_chains" % (outdir, self.jump_proposal_name)
+        if ".txt" in outfile:
+            outfile = outfile.split(".txt")[0]
+        for i in range(self.num_chains):
+            np.savetxt("%s_chain%s.txt" % (outfile, i),  self.initial_samples[i])
 
     def _plot(self, func, **kwargs):
         """Generate plots according to a specific function
