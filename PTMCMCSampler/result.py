@@ -10,8 +10,8 @@ class Result(object):
         array of samples that have not been burnt in
     """
     def __init__(self, initial_samples,
-                 initial_likelihood_vals = None,
-                 initial_prior_vals = None,
+                 initial_likelihood_vals=None,
+                 initial_prior_vals=None,
                  burnin=0,
                  jump_proposal_name=None):
         self.initial_samples = initial_samples
