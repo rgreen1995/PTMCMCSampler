@@ -61,7 +61,7 @@ class Result(object):
             the default is 25% of the chain length
         """
         if burnin is None:
-            burnin = int(0.25 * len(samples))
+            burnin = int(0.25 * len(self.initial_samples))
         elif isinstance(burnin, float):
             burnin = int(burnin)
         setattr(self, "burnin", burnin)
@@ -79,7 +79,7 @@ class Result(object):
         """Return the likelihood values for each sample
         """
         if self.num_chains == 1:
-            np.expand_dims(self.initial_likelihood_vals, axis=0)
+            np.expand_dims(self.inital_likelihood_vals, axis=0)
         return self.inital_likelihood_vals[:, self.burnin :]
 
     @property

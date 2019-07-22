@@ -1,5 +1,7 @@
 import pytest
 import numpy as np
+import matplotlib
+import corner
 from PTMCMCSampler.result import Result
 
 
@@ -16,7 +18,8 @@ class BaseResult(object):
         """Test that the likelihood property returns what it should
         """
         result_values = self.result.likelihood_values.all()
-        assert result_values == self.initial_likelihood_vals[:, self.burnin :].all()
+        true_values = self.initial_likelihood_vals[:, self.burnin :].all()
+        assert result_values == true_values
 
     def test_prior_value(self):
         """Test that the likelihood property returns what it should
@@ -30,8 +33,22 @@ class BaseResult(object):
         assert self.result.burnin == self.burnin
         self.result.set_burnin(500)
         assert self.result.burnin == 500
+        self.result.set_burnin(500.0)
+        assert self.result.burnin == 500
+        self.result.set_burnin(None)
+        assert self.result.burnin == int(0.25 * len(self.initial_samples))
         self.result.set_burnin(self.burnin)
         assert self.result.burnin == self.burnin
+
+    def test_plot_chains(self):
+        """Test the function `plot_chains`
+        """
+        assert isinstance(self.result.plot_chains(), matplotlib.figure.Figure)
+
+    def test_plot_corner(self):
+        """Test the function `plot_corner`
+        """
+        assert isinstance(self.result.plot_corner(), matplotlib.figure.Figure)
 
 
 class TestResult1d(BaseResult):
@@ -76,6 +93,16 @@ class TestResult1d(BaseResult):
         """
         super(TestResult1d, self).test_prior_value()
 
+    def test_plot_chains(self):
+        """Test that we can produce a chain plot
+        """
+        super(TestResult1d, self).test_plot_chains()
+
+    def test_plot_corner(self):
+        """Test that we can produce a corner plot
+        """
+        super(TestResult1d, self).test_plot_corner()
+
 
 class TestResult2d(BaseResult):
     """Class to test the Result object for 2 cold chains
@@ -118,3 +145,13 @@ class TestResult2d(BaseResult):
         """Test that the likelihood property returns what it should
         """
         super(TestResult2d, self).test_prior_value()
+
+    def test_plot_chains(self):
+        """Test that we can produce a chain plot
+        """
+        super(TestResult2d, self).test_plot_chains()
+
+    def test_plot_corner(self):
+        """Test that we can produce a corner plot
+        """
+        super(TestResult2d, self).test_plot_corner()
