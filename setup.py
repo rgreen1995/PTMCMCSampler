@@ -18,7 +18,7 @@ setup(
     version=PTMCMCSampler.__version__,
     author="Justin A. Ellis",
     author_email="justin.ellis18@gmail.com",
-    packages=["PTMCMCSampler"],
+    packages=["PTMCMCSampler", "PTMCMCSampler.proposals"],
     package_dir={'PTMCMCSampler': 'PTMCMCSampler'},
     url="https://github.com/jellis18/PTMCMCSampler",
     license="MIT",

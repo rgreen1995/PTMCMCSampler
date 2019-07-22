@@ -9,7 +9,7 @@ import os
 import sys
 import time
 from .nutsjump import NUTSJump, HMCJump, MALAJump
-from . import  Proposals as prop
+from . import proposals as prop
 
 try:
     from mpi4py import MPI
@@ -133,6 +133,58 @@ class PTSampler(object):
         # indicator for auxilary jumps
         self.aux = []
 
+    @staticmethod
+    def get_proposal_object_from_name(key):
+        """Return the jump proposal object from a string
+
+        Parameters
+        ----------
+        key: str
+            string of a jump proposal
+        """
+        if hasattr(prop, key):
+            return getattr(prop, key)
+        raise AttributeError(
+            "%s not recognised as a valid jump proposal. The list of available"
+            "jump proposals are:\n\n%s" % (key, "\n".join(prop.__all__)))
+
+    @staticmethod
+    def default_weights():
+        """Return the default proposals when no proposal is given
+        """
+        return {i: 1 for i in prop.__default__} 
+
+    def initialize_jump_proposals(self, weights, initalize_jump_proposal_kwargs):
+        """Initialize the jump proposal classes and add them to the proposal
+        cycle
+
+        Parameters
+        ----------
+        weights: dict
+            dictionary of weights
+        initialize_jump_proposal_kwargs: dict
+            dictionary of keyword arguments to initialize the jump proposal
+            class
+        """
+        if len(weights) == 0:
+            weights = self.default_weights()
+
+        if list(weights.keys()) == ["DifferentialEvolution"]:
+            raise Exception(
+                "The 'DifferentialEvolution' jump proposal can only be used "
+                "after burnin. Please provide an additional jump proposal")
+
+        for key in weights.keys():
+            name = self.get_proposal_object_from_name(key)
+
+            if key in initalize_jump_proposal_kwargs.keys():
+                kwargs = initalize_jump_proposal_kwargs[key]
+            else:
+                kwargs = None
+            if key != "DifferentialEvolution":
+                self.addProposalToCycle(name(kwargs), weights[key])
+        return
+
     def initialize(
         self,
         Niter,
@@ -142,18 +194,9 @@ class PTSampler(object):
         Tskip=100,
         isave=1000,
         covUpdate=1000,
-        SCAMweight=30,
-        AMweight=20,
-        DEweight=50,
-        SCAGweight=10,
-        MCAGweight=10,
-        AGweight=10,
-        NUTSweight=20,
-        HMCweight=20,
-        MALAweight=0,
+        weights={},
+        initialize_jump_proposal_kwargs={},
         burn=10000,
-        HMCstepsize=0.1,
-        HMCsteps=300,
         maxIter=None,
         thin=10,
         i0=0,
@@ -176,14 +219,9 @@ class PTSampler(object):
         elif maxIter is None and self.MPIrank == 0:
             maxIter = Niter
 
+        self.initialize_jump_proposal_kwargs = initialize_jump_proposal_kwargs
         self.ladder = ladder
         self.covUpdate = covUpdate
-        self.SCAMweight = SCAMweight
-        self.AMweight = AMweight
-        self.DEweight = DEweight
-        self.SCAGweight = SCAGweight
-        self.MCAGweight = MCAGweight
-        self.AGweight = AGweight
         self.burn = burn
         self.Tskip = Tskip
         self.thin = thin
@@ -191,6 +229,7 @@ class PTSampler(object):
         self.Niter = Niter
         self.neff = neff
         self.tstart = 0
+        self.iter = i0
         self.write_cold_chains= write_cold_chains
         self.save_jump_stats = save_jump_stats
 
@@ -209,64 +248,34 @@ class PTSampler(object):
             self._AMbuffer = np.zeros((self.Niter, self.ndim))
             self._DEbuffer = np.zeros((self.burn, self.ndim))
 
-        # ##### setup default jump proposal distributions ##### #
-
-        # Gradient-based jumps
         if self.logl_grad is not None and self.logp_grad is not None:
-            # DOES MALA do anything with the burnin? (Not adaptive enabled yet)
-            malajump = MALAJump(self.logl_grad, self.logp_grad, self.cov, self.burn)
-            self.addProposalToCycle(malajump, MALAweight)
-            if MALAweight > 0:
-                print("WARNING: MALA jumps are not working properly yet")
+            self.initialize_jump_proposal_kwargs["MALA"] = {
+                "loglik_grad": self.logl_grad,
+                "logprior_grad": self.logp_grad,
+                "mm_inv": self.cov,
+                "nburn": self.burn}
 
-            # Perhaps have an option to adaptively tune the mass matrix?
-            # Now that is done by defaulk
-            hmcjump = HMCJump(
-                self.logl_grad,
-                self.logp_grad,
-                self.cov,
-                self.burn,
-                stepsize=HMCstepsize,
-                nminsteps=2,
-                nmaxsteps=HMCsteps,
-            )
-            self.addProposalToCycle(hmcjump, HMCweight)
+            if "HMC" not in list(self.initialize_jump_proposal_kwargs.keys()):
+                self.initialize_jump_proposal_kwargs["HMC"] = self.initialize_jump_proposal_kwargs["MALA"]
+            else:
+                for key in self.initialize_jump_proposal_kwargs["MALA"]:
+                    value = self.initialize_jump_proposal_kwargs["MALA"][key]
+                    self.initialize_jump_proposal_kwargs["HMC"][key] = value
 
             # Target acceptance rate (delta) should be optimal for 0.6
-            nutsjump = NUTSJump(
-                self.logl_grad,
-                self.logp_grad,
-                self.cov,
-                self.burn,
-                trajectoryDir=None,
-                write_burnin=False,
-                force_trajlen=None,
-                force_epsilon=None,
-                delta=0.6,
-            )
-            self.addProposalToCycle(nutsjump, NUTSweight)
-
-        # add SCAM
-        self.addProposalToCycle(prop.covarianceJumpProposalSCAM, self.SCAMweight)
-
-        # add AM
-        self.addProposalToCycle(prop.covarianceJumpProposalAM, self.AMweight)
-
-        ## add SCAG
-        self.addProposalToCycle(prop.SCAGjump, self.SCAGweight)
-
-        ## add MCAG
-        self.addProposalToCycle(prop.MCAGjump, self.MCAGweight)
-
-        ## add AG
-        self.addProposalToCycle(prop.AGjump, self.AGweight)
-
-        # check length of jump cycle
-        if len(self.propCycle) == 0:
-            raise ValueError("No jump proposals specified!")
-
-        # randomize cycle
-        self.randomizeProposalCycle()
+            # nutsjump = NUTSJump(
+            #     self.logl_grad,
+            #     self.logp_grad,
+            #     self.cov,
+            #     self.burn,
+            #     trajectoryDir=None,
+            #     write_burnin=False,
+            #     force_trajlen=None,
+            #     force_epsilon=None,
+            #     delta=0.6,
+            # )
+            # if "nuts" in list(weights.keys()):
+            #     self.addProposalToCycle(nutsjump, weights["nuts"])
 
         # setup default temperature ladder
         if self.ladder is None:
@@ -284,6 +293,15 @@ class PTSampler(object):
 
         # write hot chains
         self.writeHotChains = writeHotChains
+
+        self.initialize_jump_proposals(weights, self.initialize_jump_proposal_kwargs)
+
+        # check length of jump cycle
+        if len(self.propCycle) == 0:
+            raise ValueError("No jump proposals specified!")
+
+        # randomize cycle
+        self.randomizeProposalCycle()
 
         self.resumeLength = 0
         if self.resume and os.path.isfile(self.fname):
@@ -349,18 +367,9 @@ class PTSampler(object):
         Tskip=100,
         isave=1000,
         covUpdate=1000,
-        SCAMweight=20,
-        AMweight=20,
-        DEweight=20,
-        NUTSweight=20,
-        MALAweight=20,
-        SCAGweight=10,
-        MCAGweight=10,
-        AGweight=10,
-        HMCweight=20,
+        weights={},
+        initialize_jump_proposal_kwargs={},
         burn=10000,
-        HMCstepsize=0.1,
-        HMCsteps=300,
         maxIter=None,
         thin=10,
         i0=0,
@@ -417,18 +426,9 @@ class PTSampler(object):
                 Tskip=Tskip,
                 isave=isave,
                 covUpdate=covUpdate,
-                SCAMweight=SCAMweight,
-                AMweight=AMweight,
-                DEweight=DEweight,
-                SCAGweight=SCAGweight,
-                MCAGweight=MCAGweight,
-                AGweight=AGweight,
-                NUTSweight=NUTSweight,
-                MALAweight=MALAweight,
-                HMCweight=HMCweight,
+                weights=weights,
+                initialize_jump_proposal_kwargs=initialize_jump_proposal_kwargs,
                 burn=burn,
-                HMCstepsize=HMCstepsize,
-                HMCsteps=HMCsteps,
                 maxIter=maxIter,
                 thin=thin,
                 i0=i0,
@@ -437,6 +437,9 @@ class PTSampler(object):
                 write_cold_chains= write_cold_chains,
                 hotChain=hotChain,
             )
+
+        self.jump_proposal_kwargs = {}
+        self.weights = weights
 
         ### compute lnprob for initial point in chain ###
 
@@ -519,7 +522,6 @@ class PTSampler(object):
             if self.MPIrank > 0:
                 runComplete = self.comm.Iprobe(source=0, tag=55)
                 time.sleep(0.000001)  # trick to get around
-
         return self._chain[self.burn:]
 
     def PTMCMCOneStep(self, p0, lnlike0, lnprob0, iter):
@@ -574,22 +576,24 @@ class PTSampler(object):
         getDEbuf = self.comm.Iprobe(source=0, tag=222)
         time.sleep(0.000001)
 
-        if getDEbuf and self.MPIrank > 0:
+        if getDEbuf and self.MPIrank > 0 and "DifferentialEvolution" in list(self.weights.keys()):
+            name = self.get_proposal_object_from_name("DifferentialEvolution")
             self._DEbuffer = self.comm.recv(source=0, tag=222)
 
             # randomize cycle
             if prop.DEJump not in self.propCycle:
-                self.addProposalToCycle(prop.DEJump, self.DEweight)
+                self.addProposalToCycle(name(kwargs=None), self.weights["DifferentialEvolution"])
                 self.randomizeProposalCycle()
 
             # reset
             getDEbuf = 0
 
         # after burn in, add DE jumps
-        if (iter - 1) == self.burn and self.MPIrank == 0:
+        if (iter - 1) == self.burn and self.MPIrank == 0 and "DifferentialEvolution" in list(self.weights.keys()):
+            name = self.get_proposal_object_from_name("DifferentialEvolution")
             if self.verbose:
-                print("Adding DE jump with weight {0}".format(self.DEweight))
-            self.addProposalToCycle(prop.DEJump, self.DEweight)
+                print("Adding DE jump with weight {0}".format(self.weights["DifferentialEvolution"]))
+            self.addProposalToCycle(name(kwargs=None), self.weights["DifferentialEvolution"])
 
             # randomize cycle
             self.randomizeProposalCycle()
@@ -951,6 +955,19 @@ class PTSampler(object):
         # randomize proposal cycle
         self.randomizedPropCycle = [self.propCycle[ind] for ind in index]
 
+    def update_jump_proposal_kwargs(self, iter):
+        """Update the jump proposal kwargs
+        """
+        self.jump_proposal_kwargs = {
+            "iter": iter,
+            "beta": 1 / self.temp,
+            "groups": self.groups,
+            "U": self.U,
+            "S": self.S,
+            "naccepted": self.naccepted,
+            "chain": self._chain,
+            "DEBuffer": self._DEbuffer}
+
     # call proposal functions from cycle
     def _jump(self, x, iter):
         """
@@ -963,17 +980,12 @@ class PTSampler(object):
 
         # call function
         ind = np.random.randint(0, length)
-        q, qxy = self.propCycle[ind](
-            x,
-            iter,
-            1 / self.temp,
-            self.groups,
-            self.U,
-            self.S,
-            self.naccepted,
-            self._chain,
-            self._DEbuffer,
-        )
+
+
+        self.update_jump_proposal_kwargs(iter)
+
+
+        q, qxy = self.propCycle[ind](x, self.jump_proposal_kwargs)
 
         # axuilary jump
         if len(self.aux) > 0:
