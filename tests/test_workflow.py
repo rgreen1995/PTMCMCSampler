@@ -11,30 +11,30 @@ class GaussianLikelihood(object):
     def __init__(self, ndim=2, pmin=-10, pmax=10):
         self.a = np.ones(ndim)*pmin
         self.b = np.ones(ndim)*pmax
-        
+
     def lnlikefn(self, x):
         return -0.5*np.sum(x**2)-len(x)*0.5*np.log(2*np.pi)
-    
+
     def lnlikefn_grad(self, x):
         ll = -0.5*np.sum(x**2)-len(x)*0.5*np.log(2*np.pi)
         ll_grad = -x
         return ll, ll_grad
-    
+
     def lnpriorfn(self, x):
         if np.all(self.a <= x) and np.all(self.b >= x):
             return 0.0
         else:
-            return -np.inf  
+            return -np.inf
         return 0.0
-    
+
     def lnpriorfn_grad(self, x):
         return self.lnpriorfn(x), np.zeros_like(x)
-    
+
     def lnpost_grad(self, x):
         ll, ll_grad = self.lnlikefn_grad(x)
         lp, lp_grad = self.lnpriorfn_grad(x)
         return ll+lp, ll_grad+lp_grad
-    
+
     def lnpost(self, x):
         return lnpost_grad(x)[0]
 
@@ -65,6 +65,6 @@ class TestWorkflow(object):
     def test_sample(self):
         """Try running the workflow with all default jump proposals
         """
-        data = self.sampler.sample(self.p0, 5000,
-               burn=500, thin=1, covUpdate=500)
+        data = self.sampler.sample(
+            self.p0, 5000, burn=500, thin=1, covUpdate=500)
         assert isinstance(data, Result)

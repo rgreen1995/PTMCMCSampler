@@ -16,7 +16,7 @@ def get_colors(n):
     n: float
         the number of dimensions of your color wheel
     """
-    color=cm.rainbow(np.linspace(0,1,n))
+    color=cm.rainbow(np.linspace(0, 1, n))
     return color
 
 
