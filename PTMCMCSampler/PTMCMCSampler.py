@@ -10,7 +10,7 @@ import sys
 import time
 from .nutsjump import NUTSJump, HMCJump, MALAJump
 from . import proposals as prop
-from .result import Result 
+from .result import Result
 
 try:
     from mpi4py import MPI
@@ -153,7 +153,7 @@ class PTSampler(object):
     def default_weights():
         """Return the default proposals when no proposal is given
         """
-        return {i: 1 for i in prop.__default__} 
+        return {i: 1 for i in prop.__default__}
 
     def initialize_jump_proposals(self, weights, initalize_jump_proposal_kwargs):
         """Initialize the jump proposal classes and add them to the proposal
@@ -199,7 +199,7 @@ class PTSampler(object):
         initialize_jump_proposal_kwargs={},
         burn=10000,
         maxIter=None,
-        thin=10,
+        thin=1,
         i0=0,
         neff=100000,
         write_cold_chains=False,
@@ -372,7 +372,7 @@ class PTSampler(object):
         initialize_jump_proposal_kwargs={},
         burn=10000,
         maxIter=None,
-        thin=10,
+        thin=1,
         i0=0,
         neff=100000,
         write_cold_chains= False,
@@ -523,7 +523,7 @@ class PTSampler(object):
             if self.MPIrank > 0:
                 runComplete = self.comm.Iprobe(source=0, tag=55)
                 time.sleep(0.000001)  # trick to get around
-        return Result(self._chain, self.burn)
+        return Result(self._chain, self._lnlike, self._lnprob, self.burn )
 
     def PTMCMCOneStep(self, p0, lnlike0, lnprob0, iter):
         """
