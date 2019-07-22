@@ -8,7 +8,6 @@ python:
 before_install:
   - pip install pip setuptools --upgrade
   - pip install -r requirements.txt
-  - pip install -r optional_requirements.txt
   - pip install pytest, coverage
 
 install:
