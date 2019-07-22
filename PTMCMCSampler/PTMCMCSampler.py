@@ -202,7 +202,9 @@ class PTSampler(object):
         thin=10,
         i0=0,
         neff=100000,
+        write_cold_chains=False,
         writeHotChains=False,
+        save_jump_stats = False,
         hotChain=False,
     ):
         """
@@ -229,6 +231,8 @@ class PTSampler(object):
         self.neff = neff
         self.tstart = 0
         self.iter = i0
+        self.write_cold_chains= write_cold_chains
+        self.save_jump_stats = save_jump_stats
 
         N = int(maxIter / thin)
 
@@ -313,9 +317,10 @@ class PTSampler(object):
                 self.resumechain = np.loadtxt(self.fname)
                 self.resumeLength = self.resumechain.shape[0]
             self._chainfile = open(self.fname, "a")
-        else:
+            self._chainfile.close()
+        elif self.write_cold_chains:
             self._chainfile = open(self.fname, "w")
-        self._chainfile.close()
+            self._chainfile.close()
 
     def updateChains(self, p0, lnlike0, lnprob0, iter):
         """
@@ -334,23 +339,24 @@ class PTSampler(object):
             self._lnprob[ind] = lnprob0
 
         # write to file
-        if iter % self.isave == 0 and iter > 1 and iter > self.resumeLength:
-            if self.writeHotChains or self.MPIrank == 0:
-                self._writeToFile(iter)
+        if self.write_cold_chains :
+            if iter % self.isave == 0 and iter > 1 and iter > self.resumeLength:
+                if self.writeHotChains or self.MPIrank == 0:
+                    self._writeToFile(iter)
 
-            # write output covariance matrix
-            np.save(self.outDir + "/cov.npy", self.cov)
-            if self.MPIrank == 0 and self.verbose and iter > 1:
-                sys.stdout.write("\r")
-                sys.stdout.write(
-                    "Finished %2.2f percent in %f s Acceptance rate = %g"
-                    % (
-                        iter / self.Niter * 100,
-                        time.time() - self.tstart,
-                        self.naccepted / iter,
+                # write output covariance matrix
+                np.save(self.outDir + "/cov.npy", self.cov)
+                if self.MPIrank == 0 and self.verbose and iter > 1:
+                    sys.stdout.write("\r")
+                    sys.stdout.write(
+                        "Finished %2.2f percent in %f s Acceptance rate = %g"
+                        % (
+                            iter / self.Niter * 100,
+                            time.time() - self.tstart,
+                            self.naccepted / iter,
+                        )
                     )
-                )
-                sys.stdout.flush()
+                    sys.stdout.flush()
 
     def sample(
         self,
@@ -369,7 +375,9 @@ class PTSampler(object):
         thin=10,
         i0=0,
         neff=100000,
+        write_cold_chains= False,
         writeHotChains=False,
+        save_jump_stats = False,
         hotChain=False,
     ):
         """
@@ -427,6 +435,7 @@ class PTSampler(object):
                 i0=i0,
                 neff=neff,
                 writeHotChains=writeHotChains,
+                write_cold_chains= write_cold_chains,
                 hotChain=hotChain,
             )
 
@@ -809,6 +818,7 @@ class PTSampler(object):
             )
         self._chainfile.close()
 
+
         #### write jump statistics files ####
 
         # only for T=1 chain
@@ -911,8 +921,9 @@ class PTSampler(object):
         # add to jump dictionary and initialize file
         if func.__name__ not in self.jumpDict:
             self.jumpDict[func.__name__] = [0, 0]
-            fout = open(self.outDir + "/" + func.__name__ + "_jump.txt", "w")
-            fout.close()
+            if self.save_jump_stats:
+                fout = open(self.outDir + "/" + func.__name__ + "_jump.txt", "w")
+                fout.close()
 
     # add auxilary jump proposal distribution functions
     def addAuxilaryJump(self, func):
