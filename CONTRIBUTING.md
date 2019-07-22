@@ -31,7 +31,7 @@ updated by following the instructions below:
 
 ```bash
 $ cd PTMCMCSampler
-$ git remote add upstream https://git.ligo.org/lscsoft/PTMCMCSampler
+$ git remote add upstream git@github.com:rgreen1995/PTMCMCSampler.git
 ```
 
 2. Fetch new changes from the `rgreen1995` repo,
