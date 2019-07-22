@@ -147,8 +147,7 @@ class PTSampler(object):
             return getattr(prop, key)
         raise AttributeError(
             "%s not recognised as a valid jump proposal. The list of available"
-            "jump proposals are:\n\n%s" % (key, "\n".join(prop.__all__))
-        )
+            "jump proposals are:\n\n%s" % (key, "\n".join(prop.__all__)))
 
     @staticmethod
     def default_weights():
@@ -174,8 +173,7 @@ class PTSampler(object):
         if list(weights.keys()) == ["DifferentialEvolution"]:
             raise Exception(
                 "The 'DifferentialEvolution' jump proposal can only be used "
-                "after burnin. Please provide an additional jump proposal"
-            )
+                "after burnin. Please provide an additional jump proposal")
 
         for key in weights.keys():
             name = self.get_proposal_object_from_name(key)
@@ -206,7 +204,7 @@ class PTSampler(object):
         neff=100000,
         write_cold_chains=False,
         writeHotChains=False,
-        save_jump_stats=False,
+        save_jump_stats = False,
         hotChain=False,
     ):
         """
@@ -233,7 +231,7 @@ class PTSampler(object):
         self.neff = neff
         self.tstart = 0
         self.iter = i0
-        self.write_cold_chains = write_cold_chains
+        self.write_cold_chains= write_cold_chains
         self.save_jump_stats = save_jump_stats
 
         N = int(maxIter / thin)
@@ -256,13 +254,10 @@ class PTSampler(object):
                 "loglik_grad": self.logl_grad,
                 "logprior_grad": self.logp_grad,
                 "mm_inv": self.cov,
-                "nburn": self.burn,
-            }
+                "nburn": self.burn}
 
             if "HMC" not in list(self.initialize_jump_proposal_kwargs.keys()):
-                self.initialize_jump_proposal_kwargs[
-                    "HMC"
-                ] = self.initialize_jump_proposal_kwargs["MALA"]
+                self.initialize_jump_proposal_kwargs["HMC"] = self.initialize_jump_proposal_kwargs["MALA"]
             else:
                 for key in self.initialize_jump_proposal_kwargs["MALA"]:
                     value = self.initialize_jump_proposal_kwargs["MALA"][key]
@@ -344,7 +339,7 @@ class PTSampler(object):
             self._lnprob[ind] = lnprob0
 
         # write to file
-        if self.write_cold_chains:
+        if self.write_cold_chains :
             if iter % self.isave == 0 and iter > 1 and iter > self.resumeLength:
                 if self.writeHotChains or self.MPIrank == 0:
                     self._writeToFile(iter)
@@ -380,11 +375,11 @@ class PTSampler(object):
         thin=1,
         i0=0,
         neff=100000,
-        write_cold_chains=False,
+        write_cold_chains= False,
         writeHotChains=False,
-        save_jump_stats=False,
+        save_jump_stats = False,
         hotChain=False,
-        n_cold_chains=2,
+        n_cold_chains = 2,
     ):
         """
         Function to carry out PTMCMC sampling.
@@ -441,7 +436,7 @@ class PTSampler(object):
                 i0=i0,
                 neff=neff,
                 writeHotChains=writeHotChains,
-                write_cold_chains=write_cold_chains,
+                write_cold_chains= write_cold_chains,
                 hotChain=hotChain,
             )
 
@@ -486,17 +481,16 @@ class PTSampler(object):
             accepted = 0
 
             # call PTMCMCOneStep
-            p0, lnlike0, lnprob0 = self.PTMCMCOneStep(p0, lnlike0, lnprob0, iter)
+            p0, lnlike0, lnprob0 = self.PTMCMCOneStep(p0, lnlike0, lnprob0,
+                                                      iter)
 
             # compute effective number of samples
             if iter % 1000 == 0 and iter > 2 * self.burn and self.MPIrank == 0:
                 try:
                     ### this will calculate the number of effective
                     ### samples for each chain
-                    samples = np.expand_dims(self._chain[: iter - 1], axis=0)
-                    print(samples.shape)
+                    samples = np.expand_dims(self._chain[: iter -1], axis =0)
                     arviz_samples = az.convert_to_inference_data(samples)
-                    print(az.ess(arviz_samples))
                     Neff = int(np.min(az.ess(arviz_samples).to_array().values))
                     print("\n {0} total samples".format(iter))
                     print("\n {0} effective samples".format(Neff))
@@ -519,7 +513,7 @@ class PTSampler(object):
             if self.MPIrank > 0:
                 runComplete = self.comm.Iprobe(source=0, tag=55)
                 time.sleep(0.000001)  # trick to get around
-        return Result(self._chain, self._lnlike, self._lnprob, self.burn)
+        return Result(self._chain, self._lnlike, self._lnprob, self.burn )
 
     def PTMCMCOneStep(self, p0, lnlike0, lnprob0, iter):
         """
@@ -573,40 +567,24 @@ class PTSampler(object):
         getDEbuf = self.comm.Iprobe(source=0, tag=222)
         time.sleep(0.000001)
 
-        if (
-            getDEbuf
-            and self.MPIrank > 0
-            and "DifferentialEvolution" in list(self.weights.keys())
-        ):
+        if getDEbuf and self.MPIrank > 0 and "DifferentialEvolution" in list(self.weights.keys()):
             name = self.get_proposal_object_from_name("DifferentialEvolution")
             self._DEbuffer = self.comm.recv(source=0, tag=222)
 
             # randomize cycle
             if prop.DEJump not in self.propCycle:
-                self.addProposalToCycle(
-                    name(kwargs=None), self.weights["DifferentialEvolution"]
-                )
+                self.addProposalToCycle(name(kwargs=None), self.weights["DifferentialEvolution"])
                 self.randomizeProposalCycle()
 
             # reset
             getDEbuf = 0
 
         # after burn in, add DE jumps
-        if (
-            (iter - 1) == self.burn
-            and self.MPIrank == 0
-            and "DifferentialEvolution" in list(self.weights.keys())
-        ):
+        if (iter - 1) == self.burn and self.MPIrank == 0 and "DifferentialEvolution" in list(self.weights.keys()):
             name = self.get_proposal_object_from_name("DifferentialEvolution")
             if self.verbose:
-                print(
-                    "Adding DE jump with weight {0}".format(
-                        self.weights["DifferentialEvolution"]
-                    )
-                )
-            self.addProposalToCycle(
-                name(kwargs=None), self.weights["DifferentialEvolution"]
-            )
+                print("Adding DE jump with weight {0}".format(self.weights["DifferentialEvolution"]))
+            self.addProposalToCycle(name(kwargs=None), self.weights["DifferentialEvolution"])
 
             # randomize cycle
             self.randomizeProposalCycle()
@@ -830,6 +808,7 @@ class PTSampler(object):
             )
         self._chainfile.close()
 
+
         #### write jump statistics files ####
 
         # only for T=1 chain
@@ -978,8 +957,7 @@ class PTSampler(object):
             "S": self.S,
             "naccepted": self.naccepted,
             "chain": self._chain,
-            "DEBuffer": self._DEbuffer,
-        }
+            "DEBuffer": self._DEbuffer}
 
     # call proposal functions from cycle
     def _jump(self, x, iter):
@@ -994,7 +972,9 @@ class PTSampler(object):
         # call function
         ind = np.random.randint(0, length)
 
+
         self.update_jump_proposal_kwargs(iter)
+
 
         q, qxy = self.propCycle[ind](x, self.jump_proposal_kwargs)
 
