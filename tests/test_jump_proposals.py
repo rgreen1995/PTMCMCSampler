@@ -22,6 +22,10 @@ class Base(object):
         """
         if self.kwargs and "groups" in list(self.kwargs.keys()):
             self.kwargs["groups"] = [np.array([0])]
+        if self.kwargs and "DEBuffer" in list(self.kwargs.keys()):
+            self.kwargs["DEBuffer"] = np.array([
+                np.random.random(1) for i in range(500)])
+        if self.kwargs and "U" in list(self.kwargs.keys()):
             self.kwargs["U"] = [np.array([[1.]])]
             self.kwargs["S"] = [np.array([0.01])]
         self.samples = np.array([10.])
@@ -70,6 +74,30 @@ class BaseAdaptiveCovariance(Base):
             "beta": self.beta,
             "U": self.U,
             "S": self.S}
+
+
+class TestDifferentialEvolution(Base):
+    """Test the Differential Evolution jump proposal
+    """
+    def setup(self):
+        """Setup the DifferentialEvolution class
+        """
+        self.class_object = super(
+            TestDifferentialEvolution, self).setup(
+            "DifferentialEvolution", {})
+        self.groups = [np.array([0, 1])]
+        self.beta = 1.0
+        self.DEBuffer = np.array([np.random.random(2) for i in range(500)])
+        self.kwargs = {
+            "groups": self.groups,
+            "beta": self.beta,
+            "DEBuffer": self.DEBuffer}
+
+    def test_call(self):
+        """Test the __call_ method for the DifferentialEvolution class
+        """
+        super(TestDifferentialEvolution, self).test_1d_case()
+        super(TestDifferentialEvolution, self).test_2d_case()
 
 
 class TestSingleComponentAdaptiveCovariance(BaseAdaptiveCovariance):
