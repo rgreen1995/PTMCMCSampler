@@ -9,4 +9,4 @@ def test():
     print("{0} tests have passed".format(0))
 
 
-__version__ = get_version_information() 
+__version__ = get_version_information()
