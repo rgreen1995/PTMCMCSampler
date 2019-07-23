@@ -38,10 +38,13 @@ class Result(object):
             The path to the directory to store the samples. Default = './'
         """
         if outfile is None and self.jump_proposal_name is None:
-            outfile = "%s/chains.txt" % (outdir)
+            outfile = "%s/chains" % (outdir)
         elif outfile is None:
-            outfile = "%s/%s_chains.txt" % (outdir, self.jump_proposal_name)
-        np.savetxt(outfile, self.initial_samples)
+            outfile = "%s/%s_chains" % (outdir, self.jump_proposal_name)
+        if ".txt" in outfile:
+            outfile = outfile.split(".txt")[0]
+        for i in range(self.num_chains):
+            np.savetxt("%s_chain%s.txt" % (outfile, i),  self.initial_samples[i])
 
     def _plot(self, func, **kwargs):
         """Generate plots according to a specific function
@@ -61,7 +64,7 @@ class Result(object):
             the default is 25% of the chain length
         """
         if burnin is None:
-            burnin = int(0.25 * len(samples))
+            burnin = int(0.25 * len(self.initial_samples))
         elif isinstance(burnin, float):
             burnin = int(burnin)
         setattr(self, "burnin", burnin)
@@ -79,7 +82,7 @@ class Result(object):
         """Return the likelihood values for each sample
         """
         if self.num_chains == 1:
-            np.expand_dims(self.initial_likelihood_vals, axis=0)
+            np.expand_dims(self.inital_likelihood_vals, axis=0)
         return self.inital_likelihood_vals[:, self.burnin :]
 
     @property
@@ -93,11 +96,11 @@ class Result(object):
     def plot_chains(self):
         """Generate a plot of the chains
         """
-        fig = self._plot(plots.chains_plot)
+        fig = self._plot(plots.chains_plot, num_chains=self.num_chains)
         return fig
 
     def plot_corner(self, truths=None):
         """Generate a corner plot of the samples
         """
-        fig = self._plot(plots.corner_plot, truths=truths)
+        fig = self._plot(plots.corner_plot, num_chains=self.num_chains, truths=truths)
         return fig
