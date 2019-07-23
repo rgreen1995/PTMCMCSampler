@@ -18,6 +18,8 @@ class GitInformation(object):
         try:
             name = subprocess.check_output(["git", "config", "user.name"])
             email = subprocess.check_output(["git", "config", "user.email"])
+            name = name.strip()
+            email = email.strip()
             return "%s <%s>" % (name.decode("utf-8"), email.decode("utf-8"))
         except Exception:
             return ""
@@ -28,12 +30,12 @@ class GitInformation(object):
         import time
         return time.strftime('%Y-%m-%d %H:%M:%S +0000', time.gmtime())
 
-    def get_last_commit_info():
+    def get_last_commit_info(self):
         """Return the details of the last git commit
         """
         try:
             string = subprocess.check_output(
-                ["git", "log", "-1", "--pretty=format:%H,%an,%ae])
+                ["git", "log", "-1", "--pretty=format:%H,%an,%ae"])
             string = string.decode("utf-8").split(",")
             hash, username, email = string
             author = "%s <%s>" % (username, email)
@@ -41,24 +43,11 @@ class GitInformation(object):
         except Exception:
             return ""
 
-    def get_status():
+    def get_status(self):
         """Return the state of the git repository
         """
         git_diff = subprocess.check_output(
             ["git", "diff", "."]).decode("utf-8")
-
-def get_git_status(git_path='git'):
-    """Returns the state of the git working copy
-    """
-    status_output = subprocess.call((git_path, 'diff-files', '--quiet'))
-    if status_output != 0:
-        return 'UNCLEAN: Modified working tree'
-    else:
-        # check index for changes
-        status_output = subprocess.call((git_path, 'diff-index', '--cached',
-                                         '--quiet', 'HEAD'))
-        if status_output != 0:
-            return 'UNCLEAN: Modified index'
-        else:
-            return 'CLEAN: All modifications committed'
-
+        if git_diff:
+            return "UNCLEAN: Modified working tree"
+        return "CLEAN: All modifications committed"

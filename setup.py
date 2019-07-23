@@ -24,15 +24,18 @@ def write_version_file(version):
     git_info = GitInformation()
 
     with open("PTMCMCSampler/.version", "w") as f:
-        f.write("date = "%s\n" % (git_info.date))
-        f.write("\ngit_hash = %s\n" % (git_info.hash))
-        f.write("git_author = %s\n" % (git_info.author))
-        f.write("git_builder = %s\n" % (git_info.builder))
-        f.write("git_build_date = %s\n" % (git_info.build_date))
-    return ".version"
+        f.writelines(["# Generated automatically by PTMCMCSampler\n\n"])
+        f.writelines(["last_release = %s\n" % (version)])
+        f.writelines(["\ngit_hash = %s\n" % (git_info.hash)])
+        f.writelines(["git_author = %s\n" % (git_info.author)])
+        f.writelines(["git_status = %s\n" % (git_info.status)])
+        f.writelines(["git_builder = %s\n" % (git_info.builder)])
+        f.writelines(["git_build_date = %s\n" % (git_info.build_date)])
+    return
 
 
-version_file = write_version_file(version)
+write_version_file(version)
+
 
 if sys.argv[-1] == "publish":
     os.system("python setup.py sdist upload")
@@ -41,7 +44,7 @@ if sys.argv[-1] == "publish":
 
 setup(
     name="PTMCMCSampler",
-    version=PTMCMCSampler.__version__,
+    version=version,
     author="Justin A. Ellis",
     author_email="justin.ellis18@gmail.com",
     packages=["PTMCMCSampler", "PTMCMCSampler.proposals"],
