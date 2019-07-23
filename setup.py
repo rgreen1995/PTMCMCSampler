@@ -8,6 +8,32 @@ from setuptools import Extension
 import PTMCMCSampler
 
 
+version = "1.0.1"
+
+
+def write_version_file(version):
+    """Add the version number and the git hash to the file
+    'PTMCMCSampler.__init__.py'
+
+    Parameters
+    ----------
+    version: str
+        the release version of the code that you are running
+    """
+    from PTMCMCSampler.version_helper import GitInformation
+    git_info = GitInformation()
+
+    with open("PTMCMCSampler/.version", "w") as f:
+        f.write("date = "%s\n" % (git_info.date))
+        f.write("\ngit_hash = %s\n" % (git_info.hash))
+        f.write("git_author = %s\n" % (git_info.author))
+        f.write("git_builder = %s\n" % (git_info.builder))
+        f.write("git_build_date = %s\n" % (git_info.build_date))
+    return ".version"
+
+
+version_file = write_version_file(version)
+
 if sys.argv[-1] == "publish":
     os.system("python setup.py sdist upload")
     sys.exit()
