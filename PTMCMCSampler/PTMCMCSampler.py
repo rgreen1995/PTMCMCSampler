@@ -11,7 +11,8 @@ import time
 from .nutsjump import NUTSJump, HMCJump, MALAJump
 from . import proposals as prop
 from .result import Result
-
+import tqdm
+from tqdm import trange
 try:
     from mpi4py import MPI
 except ImportError:
@@ -485,10 +486,9 @@ class PTSampler(object):
         self.tstart = time.time()
         runComplete = False
         Neff = 0
-        for i in range(n_cold_chains):
-            print("chain %s" % i)
+        for i in trange(n_cold_chains, desc="chains completed"):
             iter = i0
-            for j in range(Niter - 1):
+            for j in trange(Niter - 1, desc="samples per chain completed"):
                 iter += 1
                 accepted = 0
 
@@ -503,8 +503,8 @@ class PTSampler(object):
                         samples = np.expand_dims(self._chain[i, : iter - 1], axis=0)
                         arviz_samples = az.convert_to_inference_data(samples)
                         Neff = int(np.min(az.ess(arviz_samples).to_array().values))
-                        print("\n {0} total samples".format(iter))
-                        print("\n {0} effective samples".format(Neff))
+                        tqdm.tqdm.write("\n {0} total samples".format(iter), end="")
+                        tqdm.tqdm.write("\n {0} effective samples".format(Neff), end="")
 
                     except NameError:
                         Neff = 0
