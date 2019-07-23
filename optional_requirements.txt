@@ -2,3 +2,4 @@ matplotlib
 corner
 mpi4py
 arviz
+pre-commit
