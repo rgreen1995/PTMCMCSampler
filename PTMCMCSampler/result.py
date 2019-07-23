@@ -1,6 +1,11 @@
 import numpy as np
 from . import plots
 
+try :
+    import arviz as az
+except ImportError:
+    print("Do not have arviz package")
+    pass
 
 class Result(object):
     """Class to handle the samples from  the MCMC chains
@@ -92,6 +97,26 @@ class Result(object):
         if self.num_chains == 1:
             np.expand_dims(self.initial_prior_vals, axis=0)
         return self.initial_prior_vals[:, self.burnin :]
+
+    @property
+    def effective_sample_size(self):
+        try :
+            arviz_samples = az.convert_to_inference_data(self.samples)
+            ess = az.ess(arviz_samples)
+        except ModuleNotFoundError :
+            print('Summary relies on arviz and arviz is not instaled')
+            ess = None
+        return ess
+
+    def summary(self):
+        """ Returns a summary of the sample statistics
+        """
+        try :
+            summary = az.summary(self.samples, credible_interval=0.9)
+        except ModuleNotFoundError :
+            print('caclulating ess relies on arviz and arviz is not instaled')
+            summary = None
+        return summary
 
     def plot_chains(self):
         """Generate a plot of the chains
