@@ -1,3 +1,3 @@
 numpy>=1.15.4
 scipy
-tqdm 
+tqdm

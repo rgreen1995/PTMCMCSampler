@@ -663,6 +663,7 @@ class PTSampler(object):
                 accepted = 1
                 self.jumpDict[jump_name][1] += 1
 
+        
         # temperature swap
         swapReturn, p0, lnlike0, lnprob0 = self.PTswap(p0, lnlike0, lnprob0, iter)
 
