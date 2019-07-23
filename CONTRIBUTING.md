@@ -96,8 +96,9 @@ $ pre-commit install
 $ pre-commit install --hook-type pre-commit
 ```
 
-This will then run [black]() prior to every commit and only commit the
-reformatted files. A successful pre-commit hook will show a message like:
+This will then run [black](https://black.readthedocs.io/en/stable/) prior to
+every commit and only commit the reformatted files. A successful pre-commit hook
+will show a message like:
 
 ```bash
 black....................................................................Passed
