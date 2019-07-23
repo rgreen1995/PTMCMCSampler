@@ -20,8 +20,9 @@ def write_version_file(version):
     version: str
         the release version of the code that you are running
     """
-    from PTMCMCSampler.version_helper import GitInformation
+    from PTMCMCSampler.version_helper import GitInformation, PackageInformation
     git_info = GitInformation()
+    packages = PackageInformation()
 
     with open("PTMCMCSampler/.version", "w") as f:
         f.writelines(["# Generated automatically by PTMCMCSampler\n\n"])
@@ -31,6 +32,8 @@ def write_version_file(version):
         f.writelines(["git_status = %s\n" % (git_info.status)])
         f.writelines(["git_builder = %s\n" % (git_info.builder)])
         f.writelines(["git_build_date = %s\n" % (git_info.build_date)])
+        f.writelines(["git_build_packages = \"\"\"%s\"\"\"" % (
+            packages.package_info)])
     return
 
 

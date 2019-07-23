@@ -51,3 +51,16 @@ class GitInformation(object):
         if git_diff:
             return "UNCLEAN: Modified working tree"
         return "CLEAN: All modifications committed"
+
+
+class PackageInformation(object):
+    """Helper class to handle package versions
+    """
+    def __init__(self):
+        self.package_info = self.get_package_info()
+
+    def get_package_info(self):
+        """Return the package information
+        """
+        packages = subprocess.check_output(["pip", "freeze"]).decode("utf-8")
+        return packages
