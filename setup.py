@@ -1,11 +1,6 @@
 import os
 import sys
-import numpy
-
 from setuptools import setup
-from setuptools import Extension
-
-import PTMCMCSampler
 
 
 version = "1.0.1"
@@ -21,6 +16,7 @@ def write_version_file(version):
         the release version of the code that you are running
     """
     from PTMCMCSampler.version_helper import GitInformation, PackageInformation
+
     git_info = GitInformation()
     packages = PackageInformation()
 
@@ -32,8 +28,7 @@ def write_version_file(version):
         f.writelines(["git_status = %s\n" % (git_info.status)])
         f.writelines(["git_builder = %s\n" % (git_info.builder)])
         f.writelines(["git_build_date = %s\n" % (git_info.build_date)])
-        f.writelines(["git_build_packages = \"\"\"%s\"\"\"" % (
-            packages.package_info)])
+        f.writelines(['git_build_packages = """%s"""' % (packages.package_info)])
     return
 
 
@@ -51,14 +46,15 @@ setup(
     author="Justin A. Ellis",
     author_email="justin.ellis18@gmail.com",
     packages=["PTMCMCSampler", "PTMCMCSampler.proposals"],
-    package_dir={'PTMCMCSampler': 'PTMCMCSampler'},
+    package_dir={"PTMCMCSampler": "PTMCMCSampler"},
     url="https://github.com/jellis18/PTMCMCSampler",
     license="MIT",
     zip_safe=False,
     description="Parallel tempering MCMC sampler written in Python",
-    long_description=open("README.md").read() + "\n\n"
-                    + "---------\n\n"
-                    + open("HISTORY.md").read(),
+    long_description=open("README.md").read()
+    + "\n\n"
+    + "---------\n\n"
+    + open("HISTORY.md").read(),
     package_data={"": ["README.md", "HISTORY.md"]},
     install_requires=["numpy", "scipy"],
     classifiers=[
@@ -68,5 +64,5 @@ setup(
         "License :: OSI Approved :: GNU General Public License (GPL)",
         "Operating System :: OS Independent",
         "Programming Language :: Python",
-    ]
+    ],
 )
