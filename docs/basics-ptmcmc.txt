@@ -1,0 +1,22 @@
+==========================
+Basics of PTMCMC Sampling
+==========================
+
+:code:`PTMCMC` stands for Parallel Tempering Markov Chain Monte Carlo.
+Look at `Parallel tempering: Theory, applications, and new perspectives <https://doi.org/10.1039/B509983H>`_ for a detailed review of this sampling technique.
+
+Parallel tempering is also known as replica exchange MCMC sampling and was first devised to improve the dynamic properties of Monte Carlo method simulations of condense matter systems. The general idea of parallel tempering is to simulate *M* replicas of the original system of interest, each replica at a different temperature. The high temperature systems are generally able to sample large volumes of phase space, whereas low temperature systems, whilst having precise sampling in a local region of phase space, may become trapped in local energy minima. Parallel tempering achieves good sampling by allowing the systems at different temperatures to exchange complete configurations. Thus, the inclusion of higher temperature systems ensures that the lower temperature systems can access a representative set of low-temperature regions of phase space, as depicted schematically in the image below.
+
+.. figure:: images/ptmcmc_globe.png
+   :align: center
+   
+   Credits: D.J. Earlab, M.W. Deema "Parallel tempering: Theory, applications, and new perspectives." Phys. Chem. Phys. (2005): 3910-3916  
+
+Another way of thinking about it is in terms of the samples distributions: in parallel tempering MCMC they are multiplied by a factor :math:`\beta = 1/T`, such that for higher temperature :math:`T` the width of the distribution is more spread out. See in the image below the distribution of samples for different values of :math:`\beta`.
+
+.. figure:: images/Parallel-tempered-relaxation-of-a-bimodal-distribution.png
+    :align: center
+    
+    Credits: Scalzo, Richard, et al. "Efficiency and robustness in Monte Carlo sampling for 3-D geophysical inversions with Obsidian v0. 1.2: setting up for success." Geoscientific Model Development 12.7 (2019): 2941-2960.
+
+Parallel tempering can make efficient use of large CPU clusters, where different replicas can be run in parallel. An additional benefit of the parallel tempering method is the generation of results for a range of temperatures, which may also be of interest to the investigator.

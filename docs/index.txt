@@ -1,0 +1,20 @@
+Welcome to PTMCMCSampler's documentation!
+=========================================
+
+PTMCMCSampler
+-------------
+PTMCMC: Parallel Tempering Markov Chain Monte-Carlo.
+
+The aim of PTMCMC is to perform parallel tempering sampling.
+In this implementation we provide an adaptive jump proposal scheme where the user can add custom jump proposals or use the default Adaptive Metropolis (AM) and Differential Evolution (DE) jump.
+
+Contents:
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Contents:
+
+   installation
+   examples
+   basics-ptmcmc
+   jump-proposals

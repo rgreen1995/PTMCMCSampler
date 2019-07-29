@@ -1,0 +1,31 @@
+============
+Installation
+============
+
+:code:`PTMCMCSampler` is developed and tested for python 3.5+.
+
+Installing using pip
+-----------------------------------
+
+:code:`PTMCMC` can be installed  using :code:`pip`. To do so simply run:
+
+.. code-block:: console
+
+   $ pip install PTMCMCSampler
+
+Installing from source
+-------------------------------------
+
+If you would like to install :code:`PTMCMCSampler` from source, you have a working version of `pip` and you have `git` correctly installed.
+
+Clone the repository, install the requirements, and then install the software:
+
+.. code-block:: console
+
+   $ git clone git@github.com:rgreen1995/PTMCMCSampler.git
+   $ cd PTMCMCSampler/
+   $ pip install -r requirements.txt
+   $ python setup.py install
+
+Once you have run these steps, you have :code:`PTMCMCSampler` installed. You can now
+try to run the examples.

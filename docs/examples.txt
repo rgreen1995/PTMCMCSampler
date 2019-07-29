@@ -1,0 +1,9 @@
+=========
+Examples
+=========
+
+All the available examples can be found `here <https://github.com/rgreen1995/PTMCMCSampler/tree/master/examples>`_.
+
+Start here
+----------
+We recommend starting from this `simple example <https://github.com/rgreen1995/PTMCMCSampler/blob/master/examples/simple.ipynb>`_.

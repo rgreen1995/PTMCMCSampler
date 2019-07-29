@@ -1,0 +1,98 @@
+==============
+Jump Proposals
+==============
+
+This implementation of :code:`PTMCMC` uses an adaptive jump proposal scheme that includes both standard and single component Adaptive Metropolis (AM) and Differential Evolution (DE) jumps.
+
+------------------------
+Default Jump Proposals
+------------------------
+
+:code:`PTMCMC` has a list of available jump proposals which are already implemented. Each jump proposal will have an equal weighting. This means that each jump proposal has equal probability of being picked. The default jump proposals take the following arguments:
+
+.. code-block:: python
+    
+    Parameters
+    ----------
+    samples: list
+        list of samples
+    kwargs: dict
+        dictionary of kwargs
+
+The jumps available are listed below:
+
+Adaptive Covariance
+####################
+**(Single or Multi-Component)**
+
+This jump chooses one parameter at a time along the covariance (single component) or in more than one parameter (multi-component).  It will also occasionally use different jump sizes to ensure proper mixing. 
+
+Adaptive Gaussian
+####################
+**(Single or Multi-Component)**
+
+This jump chooses one parameter at random (single component) or several parameters at random (multi-component) and moves according to a normal distribution where sigma is an adaptive parameter that adjusts according to the current acceptance rate.
+
+
+Differential Evolution
+#######################
+This jump proposal differentially evolves the old sample based on some Gaussian randomisation calculated from two existing coordinates.
+
+Normal
+########
+The new sample is drawn from a normal distribution centred around the old sample.
+
+Uniform
+########
+The new sample is drawn from a uniform distribution between two values.
+
+Prior
+######
+
+---------------------------------
+Weighting Default Jump Proposals
+---------------------------------
+
+You are able to specify different weights for different jump proposals by passing a dictionary called :code:`weights` to the sampler object. This dictionary might have the following form:
+
+.. code-block:: python
+
+   weights = {"SingleComponentAdaptiveCovariance": 5,
+           "AdaptiveCovariance": 1,
+           "SingleComponentAdaptiveGaussian": 1,
+           "MultiComponentAdaptiveGaussian": 1,
+           "AdaptiveGaussian": 1,
+           "DifferentialEvolution": 1}
+           
+Some jump proposals (like Normal and Uniform) require addtional keyword arguments. These keyword arguments are passed to the sampler object by using the :code:`jump_proposal_arguments` keyword argument.
+
+.. code-block:: python
+
+    jump_proposal_arguments = {"Uniform": {"pmin": 0, "pmax": 100}}
+           
+----------------------
+Custom Jump Proposals
+----------------------
+
+Custom jump proposals can be added very easily by creating a class object containing the jump function and using the :code:`addProposalToCycle` function to add the proposal to the sampler. See the example below for a triangular custom jump.
+
+.. code-block:: python
+
+    class CustomJump(object):
+        """
+        Class to handle my custom jump proposal
+        """
+        def __init__(self, pmin, mode, pmax):
+            self.pmin = pmin
+            self.mode = mode
+            self.pmax = pmax
+
+        def jump(self, samples):
+            new_samples = np.random.triangular(self.pmin, self.mode, self.pmax, len(samples))
+            return new_samples, 0.0
+            
+    customjump = CustomJump(0, 5, 8)
+    
+    sampler.addProposalToCycle(customjump.jump, 10)
+
+
