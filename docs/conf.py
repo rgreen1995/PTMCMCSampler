@@ -18,7 +18,7 @@
 #
 import os
 import sys
-from PTMCMCSampler import PTMCMCSampler
+# from PTMCMCSampler import PTMCMCSampler
 sys.path.insert(0, os.path.abspath('../PTMCMCSampler/'))
 
 # -- General configuration ------------------------------------------------
@@ -175,4 +175,3 @@ texinfo_documents = [
 ]
 
 numpydoc_show_class_members = False
-

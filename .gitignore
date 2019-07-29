@@ -3,6 +3,8 @@ dist
 *~
 .*.swp
 *.pyc
-*.txt
 *.h5
-_build
+*.egg*
+*.ipynb
+.coverage
+.version
